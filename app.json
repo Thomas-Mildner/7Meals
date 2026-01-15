@@ -12,6 +12,10 @@
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "notification": {
+      "icon": "./assets/notification_icon.png",
+      "color": "#2A9D8F"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.thomasmildner.7meals",
