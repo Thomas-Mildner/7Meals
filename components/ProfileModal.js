@@ -29,6 +29,7 @@ export default function ProfileModal({ visible, onClose }) {
     const [selectedDay, setSelectedDay] = useState(1);
     const [reminderTime, setReminderTime] = useState(new Date(new Date().setHours(10, 0, 0, 0)));
     const [showTimePicker, setShowTimePicker] = useState(false);
+    const [showDayPicker, setShowDayPicker] = useState(false);
 
     useEffect(() => {
         // Check initial permission status to set toggle correctly
@@ -88,7 +89,7 @@ export default function ProfileModal({ visible, onClose }) {
 
     const onTimeChange = (event, selectedDate) => {
         const currentDate = selectedDate || reminderTime;
-        setShowTimePicker(Platform.OS === 'ios');
+        setShowTimePicker(Platform.OS === 'ios'); // Keep open on iOS (inline), close on Android
         setReminderTime(currentDate);
     };
 
@@ -108,10 +109,13 @@ export default function ProfileModal({ visible, onClose }) {
                 }
             );
         } else {
-            // For Android simplicity, just cycling for now
-            const nextDay = selectedDay === 7 ? 1 : selectedDay + 1;
-            setSelectedDay(nextDay);
+            setShowDayPicker(true);
         }
+    };
+
+    const handleDaySelect = (val) => {
+        setSelectedDay(val);
+        setShowDayPicker(false);
     };
 
     const handleLogout = () => {
@@ -188,16 +192,27 @@ export default function ProfileModal({ visible, onClose }) {
                                         <Ionicons name="time-outline" size={24} color={Colors.text} />
                                     </View>
                                     <Text style={[styles.menuItemText, { flex: 1 }]}>Erinnerungszeit</Text>
-                                    <DateTimePicker
-                                        testID="dateTimePicker"
-                                        value={reminderTime}
-                                        mode="time"
-                                        is24Hour={true}
-                                        display="default"
-                                        onChange={onTimeChange}
-                                        themeVariant="dark"
-                                        style={{ width: 100 }}
-                                    />
+                                    <TouchableOpacity
+                                        style={styles.timePickerButton}
+                                        onPress={() => setShowTimePicker(true)}
+                                    >
+                                        <Text style={styles.timePickerButtonText}>
+                                            {reminderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </Text>
+                                    </TouchableOpacity>
+
+                                    {(showTimePicker || Platform.OS === 'ios') && (
+                                        <DateTimePicker
+                                            testID="dateTimePicker"
+                                            value={reminderTime}
+                                            mode="time"
+                                            is24Hour={true}
+                                            display="default"
+                                            onChange={onTimeChange}
+                                            themeVariant="dark"
+                                            style={Platform.OS === 'ios' ? { width: 100 } : undefined}
+                                        />
+                                    )}
                                 </View>
 
                                 <TouchableOpacity
@@ -231,6 +246,36 @@ export default function ProfileModal({ visible, onClose }) {
                         </View>
                     </View>
                 </View>
+
+                {/* Android Day Picker Modal */}
+                <Modal visible={showDayPicker} transparent animationType="fade">
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setShowDayPicker(false)}
+                    >
+                        <View style={styles.dayPickerContent}>
+                            <Text style={styles.dayPickerTitle}>Tag wählen</Text>
+                            {DAYS.map((day) => (
+                                <TouchableOpacity
+                                    key={day.value}
+                                    style={styles.dayOption}
+                                    onPress={() => handleDaySelect(day.value)}
+                                >
+                                    <Text style={[
+                                        styles.dayOptionText,
+                                        selectedDay === day.value && { color: Colors.primary }
+                                    ]}>
+                                        {day.label}
+                                    </Text>
+                                    {selectedDay === day.value && (
+                                        <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                                    )}
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </TouchableOpacity>
+                </Modal>
             </View>
         </Modal>
     );
@@ -317,5 +362,54 @@ const styles = StyleSheet.create({
         color: Colors.text,
         fontSize: 16,
         fontWeight: '600',
+    },
+    timePickerButton: {
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+    },
+    timePickerButtonText: {
+        color: Colors.primary,
+        fontSize: 16,
+        fontWeight: 'bold',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        padding: 40,
+    },
+    dayPickerContent: {
+        backgroundColor: Colors.card,
+        width: '100%',
+        borderRadius: 20,
+        padding: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    dayPickerTitle: {
+        color: Colors.text,
+        fontSize: 18,
+        fontWeight: 'bold',
+        marginBottom: 20,
+        textAlign: 'center',
+    },
+    dayOption: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.05)',
+    },
+    dayOptionText: {
+        color: Colors.text,
+        fontSize: 16,
+        fontWeight: '500',
     },
 });

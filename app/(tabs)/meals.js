@@ -83,7 +83,7 @@ export default function MealsScreen() {
                 )}
 
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {item.categories && item.categories.map(cat => (
+                    {item.categories && Array.isArray(item.categories) && item.categories.map(cat => (
                         <View key={cat} style={[styles.categoryBadge, { backgroundColor: Colors[cat] + '20' }]}>
                             <Text style={[styles.categoryText, { color: Colors[cat] }]}>
                                 {getCategoryLabel(cat)}
@@ -95,11 +95,11 @@ export default function MealsScreen() {
         </LinearGradient>
     );
 
-    // Prepare Sections
+    // Prepare Sections (Safe filtering)
     const sections = [
-        { title: 'FLEISCH', data: meals.filter(m => m.categories && m.categories.includes('meat')), key: 'meat', color: Colors.meat },
-        { title: 'FISCH', data: meals.filter(m => m.categories && m.categories.includes('fish')), key: 'fish', color: Colors.fish },
-        { title: 'VEGGIE', data: meals.filter(m => m.categories && m.categories.includes('veg')), key: 'veg', color: Colors.veg },
+        { title: 'FLEISCH', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('meat')), key: 'meat', color: Colors.meat },
+        { title: 'FISCH', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('fish')), key: 'fish', color: Colors.fish },
+        { title: 'VEGGIE', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('veg')), key: 'veg', color: Colors.veg },
     ];
 
     // Filter out empty sections if desired, or keep to show empty state per section?

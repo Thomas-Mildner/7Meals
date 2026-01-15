@@ -15,7 +15,7 @@ const DEMO_MEALS = [
 
 export const seedDatabase = async (userId) => {
     try {
-        const promises = DEMO_MEALS.map(meal => addMeal(meal.name, meal.category, userId));
+        const promises = DEMO_MEALS.map(meal => addMeal(meal.name, [meal.category], userId));
         await Promise.all(promises);
         console.log('Demo meals added successfully');
         return true;

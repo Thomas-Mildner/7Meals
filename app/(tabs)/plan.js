@@ -125,19 +125,21 @@ export default function PlanScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
-                <View style={[styles.mealContent, { borderColor: item.categories && item.categories.length > 0 ? Colors[item.categories[0]] : '#444' }]}>
+                <View style={[styles.mealContent, { borderColor: (item.categories && Array.isArray(item.categories) && item.categories.length > 0) ? Colors[item.categories[0]] : '#444' }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Text style={styles.mealName}>{item.name}</Text>
                         {item.isFavorite && <Ionicons name="heart" size={16} color="#ff6b6b" style={{ marginBottom: 6 }} />}
                     </View>
                     <View style={{ flexDirection: 'row', gap: 4 }}>
-                        {item.categories && item.categories.map(cat => (
-                            <View key={cat} style={[styles.categoryBadge, { backgroundColor: Colors[cat] + '20' }]}>
-                                <Text style={[styles.categoryText, { color: Colors[cat] }]}>
-                                    {getCategoryLabel(cat)}
-                                </Text>
-                            </View>
-                        ))}
+                        <View style={{ flexDirection: 'row', gap: 4 }}>
+                            {item.categories && Array.isArray(item.categories) && item.categories.map(cat => (
+                                <View key={cat} style={[styles.categoryBadge, { backgroundColor: Colors[cat] + '20' }]}>
+                                    <Text style={[styles.categoryText, { color: Colors[cat] }]}>
+                                        {getCategoryLabel(cat)}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
                     </View>
                 </View>
             </LinearGradient>
