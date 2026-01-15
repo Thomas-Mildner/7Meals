@@ -16,6 +16,13 @@
   - Visual history in the Meal List ("Zuletzt gegessen: 12.01.2026").
 - **Premium UI**: Dark-mode optimized with gradients, smooth animations, and intuitive gestures.
 
+## 📸 Screenshots
+
+| Weekly Plan | Smart Collection | Quick Add |
+|:---:|:---:|:---:|
+| ![Weekly Plan](/Users/thomasmildner/.gemini/antigravity/brain/8736d32d-61db-492c-888a-d668a4474dda/weekly_plan_screen_1768517128876.png) | ![Meal List](/Users/thomasmildner/.gemini/antigravity/brain/8736d32d-61db-492c-888a-d668a4474dda/meal_list_screen_1768517145423.png) | ![Add Modal](/Users/thomasmildner/.gemini/antigravity/brain/8736d32d-61db-492c-888a-d668a4474dda/add_meal_modal_1768517160533.png) |
+| *Track daily progress* | *Organized by category* | *Multi-select categories* |
+
 ## 🛠 Tech Stack
 
 - **Framework**: React Native (Expo SDK 54)
