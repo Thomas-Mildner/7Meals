@@ -32,12 +32,22 @@
       "package": "com.thomasmildner.sevenmeals"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "7Meals",
+      "shortName": "7Meals",
+      "lang": "de",
+      "display": "standalone",
+      "backgroundColor": "#ffffff",
+      "themeColor": "#ffffff",
+      "description": "7Meals - Deine App für abwechselungsreiche Mahlzeiten!",
+      "meta": {
+        "apple": {
+          "mobile-web-app-capable": "yes",
+          "mobile-web-app-status-bar-style": "black-translucent"
+        }
+      }
     },
-    "plugins": [
-      "expo-router",
-      "@react-native-community/datetimepicker"
-    ],
+    "plugins": ["expo-router", "@react-native-community/datetimepicker"],
     "extra": {
       "router": {},
       "eas": {

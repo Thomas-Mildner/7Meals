@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import * as Notifications from 'expo-notifications';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker from './PlatformDateTimePicker';
 
 const DAYS = [
     // Wait, ISO week day: 1 = Sunday? No, Notification trigger uses 1=Sunday usually
@@ -201,7 +201,7 @@ export default function ProfileModal({ visible, onClose }) {
                                         </Text>
                                     </TouchableOpacity>
 
-                                    {(showTimePicker || Platform.OS === 'ios') && (
+                                    {(showTimePicker || Platform.OS === 'ios' || Platform.OS === 'web') && (
                                         <DateTimePicker
                                             testID="dateTimePicker"
                                             value={reminderTime}
