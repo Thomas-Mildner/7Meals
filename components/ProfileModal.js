@@ -188,87 +188,89 @@ export default function ProfileModal({ visible, onClose }) {
                         </View>
                     </View>
 
-                    <View style={styles.section}>
-                        <Text style={styles.sectionHeader}>Einstellungen</Text>
+                    {Platform.OS !== 'web' && (
+                        <View style={styles.section}>
+                            <Text style={styles.sectionHeader}>Einstellungen</Text>
 
-                        <View style={styles.menuItem}>
-                            <View style={styles.menuItemIcon}>
-                                <Ionicons name="notifications-outline" size={24} color={colors.text} />
-                            </View>
-                            <Text style={[styles.menuItemText, { flex: 1 }]}>Erinnerung planen</Text>
-                            <Switch
-                                trackColor={{ false: "#767577", true: colors.primary }}
-                                thumbColor={pushEnabled ? "#f4f3f4" : "#f4f3f4"}
-                                ios_backgroundColor="#3e3e3e"
-                                onValueChange={toggleSwitch}
-                                value={pushEnabled}
-                            />
-                        </View>
-
-                        {pushEnabled && (
-                            <>
-                                <TouchableOpacity style={styles.menuItem} onPress={showDayActionSheet}>
-                                    <View style={styles.menuItemIcon}>
-                                        <Ionicons name="calendar-outline" size={24} color={colors.text} />
-                                    </View>
-                                    <Text style={[styles.menuItemText, { flex: 1 }]}>Erinnerungstag</Text>
-                                    <Text style={{ color: colors.primary, fontWeight: '600' }}>{getDayLabel(selectedDay)}</Text>
-                                    <Ionicons name="chevron-forward" size={16} color="#666" style={{ marginLeft: 8 }} />
-                                </TouchableOpacity>
-
-                                <View style={styles.menuItem}>
-                                    <View style={styles.menuItemIcon}>
-                                        <Ionicons name="time-outline" size={24} color={colors.text} />
-                                    </View>
-                                    <Text style={[styles.menuItemText, { flex: 1 }]}>Erinnerungszeit</Text>
-                                    {Platform.OS === 'web' ? (
-                                        <DateTimePicker
-                                            testID="dateTimePicker"
-                                            value={reminderTime}
-                                            mode="time"
-                                            is24Hour={true}
-                                            display="default"
-                                            onChange={onTimeChange}
-                                            themeVariant={theme}
-                                            style={{ minWidth: 100 }}
-                                        />
-                                    ) : (
-                                        <>
-                                            <TouchableOpacity
-                                                style={styles.timePickerButton}
-                                                onPress={() => setShowTimePicker(true)}
-                                            >
-                                                <Text style={styles.timePickerButtonText}>
-                                                    {reminderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </Text>
-                                            </TouchableOpacity>
-
-                                            {(showTimePicker || Platform.OS === 'ios') && (
-                                                <DateTimePicker
-                                                    testID="dateTimePicker"
-                                                    value={reminderTime}
-                                                    mode="time"
-                                                    is24Hour={true}
-                                                    display="default"
-                                                    onChange={onTimeChange}
-                                                    themeVariant={theme}
-                                                    style={Platform.OS === 'ios' ? { width: 100 } : undefined}
-                                                />
-                                            )}
-                                        </>
-                                    )}
+                            <View style={styles.menuItem}>
+                                <View style={styles.menuItemIcon}>
+                                    <Ionicons name="notifications-outline" size={24} color={colors.text} />
                                 </View>
+                                <Text style={[styles.menuItemText, { flex: 1 }]}>Erinnerung planen</Text>
+                                <Switch
+                                    trackColor={{ false: "#767577", true: colors.primary }}
+                                    thumbColor={pushEnabled ? "#f4f3f4" : "#f4f3f4"}
+                                    ios_backgroundColor="#3e3e3e"
+                                    onValueChange={toggleSwitch}
+                                    value={pushEnabled}
+                                />
+                            </View>
 
-                                <TouchableOpacity
-                                    style={[styles.menuItem, { backgroundColor: colors.primary, justifyContent: 'center', marginTop: 10 }]}
-                                    onPress={() => handleSchedule(true, selectedDay, reminderTime)}
-                                >
-                                    <Text style={[styles.menuItemText, { color: '#fff', fontWeight: 'bold' }]}>Zeitplan speichern</Text>
-                                    <Ionicons name="checkmark-circle-outline" size={20} color="#fff" style={{ marginLeft: 8 }} />
-                                </TouchableOpacity>
-                            </>
-                        )}
-                    </View>
+                            {pushEnabled && (
+                                <>
+                                    <TouchableOpacity style={styles.menuItem} onPress={showDayActionSheet}>
+                                        <View style={styles.menuItemIcon}>
+                                            <Ionicons name="calendar-outline" size={24} color={colors.text} />
+                                        </View>
+                                        <Text style={[styles.menuItemText, { flex: 1 }]}>Erinnerungstag</Text>
+                                        <Text style={{ color: colors.primary, fontWeight: '600' }}>{getDayLabel(selectedDay)}</Text>
+                                        <Ionicons name="chevron-forward" size={16} color="#666" style={{ marginLeft: 8 }} />
+                                    </TouchableOpacity>
+
+                                    <View style={styles.menuItem}>
+                                        <View style={styles.menuItemIcon}>
+                                            <Ionicons name="time-outline" size={24} color={colors.text} />
+                                        </View>
+                                        <Text style={[styles.menuItemText, { flex: 1 }]}>Erinnerungszeit</Text>
+                                        {Platform.OS === 'web' ? (
+                                            <DateTimePicker
+                                                testID="dateTimePicker"
+                                                value={reminderTime}
+                                                mode="time"
+                                                is24Hour={true}
+                                                display="default"
+                                                onChange={onTimeChange}
+                                                themeVariant={theme}
+                                                style={{ minWidth: 100 }}
+                                            />
+                                        ) : (
+                                            <>
+                                                <TouchableOpacity
+                                                    style={styles.timePickerButton}
+                                                    onPress={() => setShowTimePicker(true)}
+                                                >
+                                                    <Text style={styles.timePickerButtonText}>
+                                                        {reminderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </Text>
+                                                </TouchableOpacity>
+
+                                                {(showTimePicker || Platform.OS === 'ios') && (
+                                                    <DateTimePicker
+                                                        testID="dateTimePicker"
+                                                        value={reminderTime}
+                                                        mode="time"
+                                                        is24Hour={true}
+                                                        display="default"
+                                                        onChange={onTimeChange}
+                                                        themeVariant={theme}
+                                                        style={Platform.OS === 'ios' ? { width: 100 } : undefined}
+                                                    />
+                                                )}
+                                            </>
+                                        )}
+                                    </View>
+
+                                    <TouchableOpacity
+                                        style={[styles.menuItem, { backgroundColor: colors.primary, justifyContent: 'center', marginTop: 10 }]}
+                                        onPress={() => handleSchedule(true, selectedDay, reminderTime)}
+                                    >
+                                        <Text style={[styles.menuItemText, { color: '#fff', fontWeight: 'bold' }]}>Zeitplan speichern</Text>
+                                        <Ionicons name="checkmark-circle-outline" size={20} color="#fff" style={{ marginLeft: 8 }} />
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                        </View>
+                    )}
 
                     <View style={styles.section}>
                         <Text style={styles.sectionHeader}>Konto</Text>
@@ -369,7 +371,7 @@ const getStyles = (colors) => StyleSheet.create({
     },
     closeButton: {
         padding: 5,
-        backgroundColor: theme => theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+        backgroundColor: colors.card,
         borderRadius: 15,
     },
     content: {
