@@ -10,9 +10,10 @@ import { Platform } from 'react-native';
 import { useEffect } from 'react';
 import { messaging } from '../config/firebaseConfig';
 import { getToken } from 'firebase/messaging';
+import { Analytics } from '@vercel/analytics/next';
 
 // Replace with your VAPID key from Firebase Console -> Project Settings -> Cloud Messaging -> Web Push Certificates
-const VAPID_KEY = "jp18ON7nruwMiUbuGke2oeaAqIYILAis3nj09MiHGYM";
+const VAPID_KEY = process.env.EXPO_PUBLIC_VAPID_KEY;
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
