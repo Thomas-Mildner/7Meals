@@ -119,6 +119,14 @@ export default function ProfileModal({ visible, onClose }) {
     };
 
     const handleLogout = () => {
+        if (Platform.OS === 'web') {
+            if (window.confirm("Möchtest du dich wirklich abmelden?")) {
+                onClose();
+                logout();
+            }
+            return;
+        }
+
         Alert.alert(
             "Abmelden",
             "Möchtest du dich wirklich abmelden?",

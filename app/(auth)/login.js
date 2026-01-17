@@ -22,7 +22,7 @@ export default function LoginScreen() {
     const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
         clientId: '153120469629-eg71199k32r5vn5tf4m6nqqnc01dcoua.apps.googleusercontent.com',
         iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com', // Placeholder
-        androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com', // Placeholder
+        androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontet.com', // Placeholder
     });
 
     useEffect(() => {
