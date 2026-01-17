@@ -28,11 +28,15 @@ export default function PlanScreen() {
             return;
         }
         generatePlan().then(result => {
-            if (result && result.hasDuplicates) {
-                Alert.alert(
-                    "Hinweis",
-                    "Einige Gerichte kommen mehrfach vor, da nicht genügend passende Gerichte verfügbar waren."
-                );
+            if (result) {
+                if (result.warnings && result.warnings.length > 0) {
+                    Alert.alert("Hinweis", result.warnings.join('\n'));
+                } else if (result.hasDuplicates) {
+                    Alert.alert(
+                        "Hinweis",
+                        "Einige Gerichte kommen mehrfach vor, da nicht genügend passende Gerichte verfügbar waren."
+                    );
+                }
             }
         });
     };

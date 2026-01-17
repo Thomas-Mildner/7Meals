@@ -94,14 +94,38 @@ export const useMealPlan = () => {
 
         const newPlanDays = [];
 
-        const getRandomMeals = (source, count) => {
-            if (source.length === 0) return [];
+        const generatedWarnings = [];
+
+        const getRandomMeals = (source, count, categoryLabel) => {
+            let pool = [...source];
+            // Fallback if specific category is empty
+            if (pool.length === 0) {
+                if (meals.length > 0) {
+                    pool = [...meals];
+                    generatedWarnings.push(`Keine Gerichte für '${categoryLabel}' gefunden. Zufällige Alternativen gewählt.`);
+                } else {
+                    // No meals at all in DB
+                    generatedWarnings.push(`Keine Gerichte für '${categoryLabel}' verfügbar.`);
+                    const placeholders = [];
+                    for (let k = 0; k < count; k++) {
+                        placeholders.push({
+                            id: `placeholder-${categoryLabel}-${Date.now()}-${k}`,
+                            name: `Gericht hinzufügen (${categoryLabel})`,
+                            categories: [],
+                            isFavorite: false
+                        });
+                    }
+                    return placeholders;
+                }
+            }
 
             const selected = [];
-            let pool = [...source];
-
+            // Basic weighted random selection
             for (let i = 0; i < count; i++) {
-                if (pool.length === 0) pool = [...source];
+                if (pool.length === 0) pool = source.length > 0 ? [...source] : [...meals];
+
+                // Safety: if pool is STILL empty (means meals.length was 0 initially and we are here?), break
+                if (pool.length === 0) break;
 
                 const scoredPool = pool.map(meal => {
                     let score = 10;
@@ -135,9 +159,9 @@ export const useMealPlan = () => {
             return selected;
         };
 
-        newPlanDays.push(...getRandomMeals(meatMeals, config.meat));
-        newPlanDays.push(...getRandomMeals(fishMeals, config.fish));
-        newPlanDays.push(...getRandomMeals(vegMeals, config.veg));
+        newPlanDays.push(...getRandomMeals(meatMeals, config.meat, 'Fleisch'));
+        newPlanDays.push(...getRandomMeals(fishMeals, config.fish, 'Fisch'));
+        newPlanDays.push(...getRandomMeals(vegMeals, config.veg, 'Veggie'));
 
         // Add Brotzeit placeholders
         for (let i = 0; i < config.brotzeit; i++) {
@@ -170,7 +194,7 @@ export const useMealPlan = () => {
             if (idCounts[m.id] > 1) hasDuplicates = true;
         });
 
-        return { hasDuplicates };
+        return { hasDuplicates, warnings: generatedWarnings };
 
     }, [meals, config, plan, startDate, user, refreshMeals]);
 
