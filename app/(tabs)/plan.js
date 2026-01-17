@@ -7,6 +7,7 @@ import ProfileModal from '../../components/ProfileModal';
 import ConfirmModal from '../../components/ConfirmModal';
 import { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useEffect } from 'react';
 
 const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
@@ -16,6 +17,16 @@ export default function PlanScreen() {
     const { colors, theme } = useTheme();
     const [profileModalVisible, setProfileModalVisible] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [isConfigExpanded, setIsConfigExpanded] = useState(true);
+
+    useEffect(() => {
+        // Automatically collapse configuration if a plan exists
+        if (plan.length > 0) {
+            setIsConfigExpanded(false);
+        } else {
+            setIsConfigExpanded(true);
+        }
+    }, [plan.length === 0]); // Re-expand only when plan is cleared
 
     const totalDays = config.meat + config.fish + config.veg + config.brotzeit;
 
@@ -174,29 +185,49 @@ export default function PlanScreen() {
             </View>
 
             <View style={styles.configSection}>
-                <View style={styles.progressContainer}>
-                    <Text style={styles.progressText}>Ausgewählte Tage: {totalDays}/7</Text>
-                    <View style={styles.progressBar}>
-                        <View style={[styles.progressFill, { width: `${(totalDays / 7) * 100}%`, backgroundColor: totalDays === 7 ? colors.primary : '#ff9f43' }]} />
-                    </View>
-                </View>
-
-                <View style={styles.countersRow}>
-                    {renderConfigCounter('Fleisch', 'meat')}
-                    {renderConfigCounter('Fisch', 'fish')}
-                    {renderConfigCounter('Veggie', 'veg')}
-                    {renderConfigCounter('Brotzeit', 'brotzeit')}
-                </View>
-
                 <TouchableOpacity
-                    style={[styles.generateButton, totalDays !== 7 && styles.disabledButton]}
-                    onPress={handleGenerate}
-                    disabled={totalDays !== 7}
+                    style={styles.configHeader}
+                    onPress={() => setIsConfigExpanded(!isConfigExpanded)}
+                    activeOpacity={0.7}
                 >
-                    <Text style={styles.generateButtonText}>
-                        {plan.length > 0 ? "Plan neu erstellen" : "Plan erstellen"}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="settings-outline" size={20} color={colors.primary} />
+                        <Text style={styles.configTitle}>Konfiguration</Text>
+                    </View>
+                    <Ionicons
+                        name={isConfigExpanded ? "chevron-up" : "chevron-down"}
+                        size={20}
+                        color={colors.text}
+                    />
                 </TouchableOpacity>
+
+                {isConfigExpanded && (
+                    <View style={styles.configContent}>
+                        <View style={styles.progressContainer}>
+                            <Text style={styles.progressText}>Ausgewählte Tage: {totalDays}/7</Text>
+                            <View style={styles.progressBar}>
+                                <View style={[styles.progressFill, { width: `${(totalDays / 7) * 100}%`, backgroundColor: totalDays === 7 ? colors.primary : '#ff9f43' }]} />
+                            </View>
+                        </View>
+
+                        <View style={styles.countersRow}>
+                            {renderConfigCounter('Fleisch', 'meat')}
+                            {renderConfigCounter('Fisch', 'fish')}
+                            {renderConfigCounter('Veggie', 'veg')}
+                            {renderConfigCounter('Brotzeit', 'brotzeit')}
+                        </View>
+
+                        <TouchableOpacity
+                            style={[styles.generateButton, totalDays !== 7 && styles.disabledButton]}
+                            onPress={handleGenerate}
+                            disabled={totalDays !== 7}
+                        >
+                            <Text style={styles.generateButtonText}>
+                                {plan.length > 0 ? "Plan neu erstellen" : "Plan erstellen"}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </View>
 
             <FlatList
@@ -259,12 +290,27 @@ const getStyles = (colors, theme) => StyleSheet.create({
         marginTop: 10,
         backgroundColor: colors.card,
         borderRadius: 20,
-        padding: 20,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 6,
+        overflow: 'hidden',
+    },
+    configHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+    },
+    configTitle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: colors.text,
+    },
+    configContent: {
+        paddingHorizontal: 20,
+        paddingBottom: 20,
     },
     progressContainer: {
         marginBottom: 20,
