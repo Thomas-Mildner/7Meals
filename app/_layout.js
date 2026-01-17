@@ -2,6 +2,8 @@ import { Stack } from 'expo-router';
 import { AuthProvider } from '../context/AuthContext';
 import { MealProvider } from '../context/MealContext';
 import * as Notifications from 'expo-notifications';
+import { useFonts } from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 import { useEffect } from 'react';
 import { messaging } from '../config/firebaseConfig';
@@ -19,6 +21,16 @@ Notifications.setNotificationHandler({
 });
 
 export default function RootLayout() {
+    const [loaded, error] = useFonts({
+        ...Ionicons.font,
+    });
+
+    useEffect(() => {
+        if (loaded || error) {
+            // Hide splash screen if you were controlling it, or just proceed
+        }
+    }, [loaded, error]);
+
     useEffect(() => {
         if (Platform.OS === 'web' && messaging) {
             navigator.serviceWorker.register('/sw.js')
@@ -42,6 +54,10 @@ export default function RootLayout() {
                 });
         }
     }, []);
+
+    if (!loaded && !error) {
+        return null;
+    }
 
     return (
 
