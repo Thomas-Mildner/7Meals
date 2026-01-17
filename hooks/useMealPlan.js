@@ -9,7 +9,7 @@ export const useMealPlan = () => {
     const { user } = useAuth();
     const [plan, setPlan] = useState([]);
     const [startDate, setStartDate] = useState(null);
-    const [config, setConfig] = useState({ meat: 3, fish: 2, veg: 2, brotzeit: 0 });
+    const [config, setConfig] = useState({ meat: 2, fish: 2, veg: 2, brotzeit: 1 });
     const [loadingPlan, setLoadingPlan] = useState(false);
 
     // Load plan on mount

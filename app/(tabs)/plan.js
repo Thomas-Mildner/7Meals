@@ -2,21 +2,25 @@ import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useMealPlan } from '../../hooks/useMealPlan';
-import { Colors } from '../../constants/Colors';
 import { useMeals } from '../../hooks/useMeals';
 import ProfileModal from '../../components/ProfileModal';
 import ConfirmModal from '../../components/ConfirmModal';
 import { useState } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 
 const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
 export default function PlanScreen() {
     const { plan, startDate, config, updateConfig, generatePlan, swapMeal, clearPlan } = useMealPlan();
     const { meals, markAsEaten } = useMeals();
+    const { colors, theme } = useTheme();
     const [profileModalVisible, setProfileModalVisible] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
 
     const totalDays = config.meat + config.fish + config.veg + config.brotzeit;
+
+    // Dynamic Styles
+    const styles = getStyles(colors, theme);
 
     const handleGenerate = () => {
         if (meals.length === 0) {
@@ -47,20 +51,20 @@ export default function PlanScreen() {
 
     const renderConfigCounter = (label, type) => (
         <View style={styles.counterContainer}>
-            <Text style={[styles.counterLabel, { color: Colors[type] }]}>{label}</Text>
+            <Text style={[styles.counterLabel, { color: colors[type] }]}>{label}</Text>
             <View style={styles.counterControls}>
                 <TouchableOpacity
                     onPress={() => updateConfig(type, Math.max(0, config[type] - 1))}
                     style={styles.counterButton}
                 >
-                    <Ionicons name="remove" size={20} color={Colors.text} />
+                    <Ionicons name="remove" size={20} color={colors.text} />
                 </TouchableOpacity>
                 <Text style={styles.counterValue}>{config[type]}</Text>
                 <TouchableOpacity
                     onPress={() => updateConfig(type, config[type] + 1)}
                     style={styles.counterButton}
                 >
-                    <Ionicons name="add" size={20} color={Colors.text} />
+                    <Ionicons name="add" size={20} color={colors.text} />
                 </TouchableOpacity>
             </View>
         </View>
@@ -93,7 +97,7 @@ export default function PlanScreen() {
 
         return (
             <LinearGradient
-                colors={[Colors.card, '#2a2a2a']}
+                colors={[colors.card, theme === 'dark' ? '#2a2a2a' : '#e6e6e6']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.dayCard}
@@ -125,11 +129,11 @@ export default function PlanScreen() {
                         </TouchableOpacity>
 
                         <TouchableOpacity onPress={() => swapMeal(index)} hitSlop={10}>
-                            <Ionicons name="refresh-circle" size={28} color={Colors.primary} />
+                            <Ionicons name="refresh-circle" size={28} color={colors.primary} />
                         </TouchableOpacity>
                     </View>
                 </View>
-                <View style={[styles.mealContent, { borderColor: (item.categories && Array.isArray(item.categories) && item.categories.length > 0) ? Colors[item.categories[0]] : '#444' }]}>
+                <View style={[styles.mealContent, { borderColor: (item.categories && Array.isArray(item.categories) && item.categories.length > 0) ? colors[item.categories[0]] : '#444' }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Text style={styles.mealName}>{item.name}</Text>
                         {item.isFavorite && <Ionicons name="heart" size={16} color="#ff6b6b" style={{ marginBottom: 6 }} />}
@@ -137,8 +141,8 @@ export default function PlanScreen() {
                     <View style={{ flexDirection: 'row', gap: 4 }}>
                         <View style={{ flexDirection: 'row', gap: 4 }}>
                             {item.categories && Array.isArray(item.categories) && item.categories.map(cat => (
-                                <View key={cat} style={[styles.categoryBadge, { backgroundColor: Colors[cat] + '20' }]}>
-                                    <Text style={[styles.categoryText, { color: Colors[cat] }]}>
+                                <View key={cat} style={[styles.categoryBadge, { backgroundColor: colors[cat] + '20' }]}>
+                                    <Text style={[styles.categoryText, { color: colors[cat] }]}>
                                         {getCategoryLabel(cat)}
                                     </Text>
                                 </View>
@@ -161,10 +165,10 @@ export default function PlanScreen() {
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity
-                        style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.1)', width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }]}
+                        style={[styles.iconButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }]}
                         onPress={() => setProfileModalVisible(true)}
                     >
-                        <Ionicons name="person-outline" size={20} color={Colors.text} />
+                        <Ionicons name="person-outline" size={20} color={colors.text} />
                     </TouchableOpacity>
                 </View>
             </View>
@@ -173,7 +177,7 @@ export default function PlanScreen() {
                 <View style={styles.progressContainer}>
                     <Text style={styles.progressText}>Ausgewählte Tage: {totalDays}/7</Text>
                     <View style={styles.progressBar}>
-                        <View style={[styles.progressFill, { width: `${(totalDays / 7) * 100}%`, backgroundColor: totalDays === 7 ? Colors.primary : '#ff9f43' }]} />
+                        <View style={[styles.progressFill, { width: `${(totalDays / 7) * 100}%`, backgroundColor: totalDays === 7 ? colors.primary : '#ff9f43' }]} />
                     </View>
                 </View>
 
@@ -227,10 +231,10 @@ export default function PlanScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors, theme) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
         paddingTop: 60,
     },
     header: {
@@ -243,7 +247,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 34,
         fontWeight: '800',
-        color: Colors.text,
+        color: colors.text,
     },
     clearText: {
         color: '#ff6b6b',
@@ -253,7 +257,7 @@ const styles = StyleSheet.create({
     configSection: {
         margin: 20,
         marginTop: 10,
-        backgroundColor: Colors.card,
+        backgroundColor: colors.card,
         borderRadius: 20,
         padding: 20,
         shadowColor: "#000",
@@ -272,7 +276,7 @@ const styles = StyleSheet.create({
     },
     progressBar: {
         height: 6,
-        backgroundColor: '#333',
+        backgroundColor: theme === 'dark' ? '#333' : '#eee',
         borderRadius: 3,
         overflow: 'hidden',
     },
@@ -282,11 +286,15 @@ const styles = StyleSheet.create({
     },
     countersRow: {
         flexDirection: 'row',
+        flexWrap: 'wrap',
         justifyContent: 'space-between',
-        marginBottom: 25,
+        marginBottom: 15,
+        gap: 10,
     },
     counterContainer: {
         alignItems: 'center',
+        width: '47%', // 2 columns with some gap
+        marginBottom: 10,
     },
     counterLabel: {
         fontWeight: '700',
@@ -296,7 +304,7 @@ const styles = StyleSheet.create({
     counterControls: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
         borderRadius: 12,
         padding: 4,
     },
@@ -304,18 +312,18 @@ const styles = StyleSheet.create({
         padding: 8,
     },
     counterValue: {
-        color: Colors.text,
+        color: colors.text,
         fontSize: 16,
         fontWeight: 'bold',
         minWidth: 24,
         textAlign: 'center',
     },
     generateButton: {
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
         paddingVertical: 16,
         borderRadius: 14,
         alignItems: 'center',
-        shadowColor: Colors.primary,
+        shadowColor: colors.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -335,7 +343,7 @@ const styles = StyleSheet.create({
         paddingBottom: 100, // Increased for mobile nav bars
     },
     dayCard: {
-        backgroundColor: Colors.card,
+        backgroundColor: colors.card,
         borderRadius: 16,
         padding: 16,
         marginBottom: 12,
@@ -346,7 +354,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 12,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.05)',
+        borderBottomColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
         paddingBottom: 8,
     },
     eatenButton: {
@@ -359,7 +367,7 @@ const styles = StyleSheet.create({
         gap: 6
     },
     eatenButtonInactive: {
-        borderColor: '#444',
+        borderColor: '#888',
         backgroundColor: 'transparent',
     },
     eatenButtonActive: {
@@ -383,7 +391,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     mealName: {
-        color: Colors.text,
+        color: colors.text,
         fontSize: 18,
         fontWeight: '700',
         marginBottom: 6,
@@ -407,7 +415,7 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: Colors.text,
+        color: colors.text,
         marginTop: 20,
         marginBottom: 8,
     },

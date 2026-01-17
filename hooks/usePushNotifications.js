@@ -19,7 +19,7 @@ export const usePushNotifications = () => {
             });
         }
 
-        if (Device.isDevice) {
+        if (Device.isDevice || Platform.OS === 'web') {
             const { status: existingStatus } = await Notifications.getPermissionsAsync();
             let finalStatus = existingStatus;
 
@@ -33,10 +33,21 @@ export const usePushNotifications = () => {
                 return null;
             }
 
-            token = (await Notifications.getExpoPushTokenAsync()).data;
+            try {
+                // Hardcoded VAPID key for now to match _layout.js
+                const projectId = 'f5ac5617-dbb7-4e55-aa2e-59edb1dd66dc'; // From app.json
+                token = (await Notifications.getExpoPushTokenAsync({
+                    projectId,
+                    vapidKey: 'jp18ON7nruwMiUbuGke2oeaAqIYILAis3nj09MiHGYM'
+                })).data;
+            } catch (e) {
+                console.log("Error fetching push token:", e);
+                // Even if token fails, we return a dummy string so local notifications might still work
+                // if permissions were granted.
+                token = "local-permission-granted";
+            }
         } else {
             console.log('Must use physical device for Push Notifications');
-            // Return dummy token for simulator testing of local notifications
             return "simulator-token";
         }
 
@@ -44,6 +55,11 @@ export const usePushNotifications = () => {
     };
 
     const scheduleWeeklyReminder = async (weekday = 1, hour = 10, minute = 0) => {
+        if (Platform.OS === 'web') {
+            console.log("Web notification scheduling simulated:", { weekday, hour, minute });
+            return;
+        }
+
         // Cancel all existing to avoid duplicates
         await Notifications.cancelAllScheduledNotificationsAsync();
 
@@ -75,6 +91,7 @@ export const usePushNotifications = () => {
     };
 
     const cancelAllNotifications = async () => {
+        if (Platform.OS === 'web') return;
         await Notifications.cancelAllScheduledNotificationsAsync();
     };
 

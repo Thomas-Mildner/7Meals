@@ -1,17 +1,16 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, Switch, Platform, ActionSheetIOS } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, Switch, Platform, ActionSheetIOS, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from './PlatformDateTimePicker';
 import ConfirmModal from './ConfirmModal';
+import { useTheme } from '../context/ThemeContext';
 
 const DAYS = [
-    // Wait, ISO week day: 1 = Sunday? No, Notification trigger uses 1=Sunday usually
-    // The previous code had 1=Sunday. German week starts Monday usually.
-    // Let's keep the values consistent with Expo Notifications (1-7, 1=Sunday)
     { label: 'Sonntag', value: 1 },
     { label: 'Montag', value: 2 },
     { label: 'Dienstag', value: 3 },
@@ -23,6 +22,7 @@ const DAYS = [
 
 export default function ProfileModal({ visible, onClose }) {
     const { user, logout } = useAuth();
+    const { theme, toggleTheme, colors } = useTheme();
     const [pushEnabled, setPushEnabled] = useState(false);
     const { registerForPushNotificationsAsync, scheduleWeeklyReminder, cancelAllNotifications } = usePushNotifications();
 
@@ -34,11 +34,21 @@ export default function ProfileModal({ visible, onClose }) {
 
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+    const [showScheduleSuccess, setShowScheduleSuccess] = useState(false);
+
     useEffect(() => {
-        // Check initial permission status to set toggle correctly
+        // Check stored preference instead of just permissions
         const checkStatus = async () => {
-            const settings = await Notifications.getPermissionsAsync();
-            setPushEnabled(settings.granted || settings.ios?.status === 3); // 3 is provisional
+            try {
+                const storedValue = await AsyncStorage.getItem('weeklyReminderEnabled');
+                if (storedValue !== null) {
+                    setPushEnabled(JSON.parse(storedValue));
+                } else {
+                    setPushEnabled(false); // Default to disabled
+                }
+            } catch (e) {
+                console.log("Error loading reminder preference", e);
+            }
         };
         checkStatus();
     }, [visible]);
@@ -46,47 +56,57 @@ export default function ProfileModal({ visible, onClose }) {
     const getDayLabel = (val) => DAYS.find(d => d.value === val)?.label;
 
     const handleSchedule = async (enabled, day, time) => {
-        if (enabled) {
-            const token = await registerForPushNotificationsAsync();
-            if (token) {
-                await scheduleWeeklyReminder(day, time.getHours(), time.getMinutes());
-                setPushEnabled(true);
-                Alert.alert("Erfolg", `Wöchentliche Erinnerung aktiviert! Du wirst jeden ${getDayLabel(day)} um ${time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} benachrichtigt.`);
+        try {
+            if (enabled) {
+                const token = await registerForPushNotificationsAsync();
+                if (token) {
+                    await scheduleWeeklyReminder(day, time.getHours(), time.getMinutes());
+                    setPushEnabled(true);
+                    await AsyncStorage.setItem('weeklyReminderEnabled', 'true');
+                    setShowScheduleSuccess(true);
+                } else {
+                    Alert.alert("Berechtigung erforderlich", "Bitte aktiviere Benachrichtigungen in den Einstellungen.");
+                    setPushEnabled(false);
+                    await AsyncStorage.setItem('weeklyReminderEnabled', 'false');
+                }
             } else {
-                Alert.alert("Berechtigung erforderlich", "Bitte aktiviere Benachrichtigungen in den Einstellungen.");
+                await cancelAllNotifications();
                 setPushEnabled(false);
+                await AsyncStorage.setItem('weeklyReminderEnabled', 'false');
             }
-        } else {
-            await cancelAllNotifications();
+        } catch (error) {
+            console.error(error);
+            Alert.alert("Fehler", "Ein unerwarteter Fehler ist aufgetreten: " + error.message);
             setPushEnabled(false);
+            await AsyncStorage.setItem('weeklyReminderEnabled', 'false');
         }
     };
 
     const toggleSwitch = async () => {
         const newState = !pushEnabled;
         if (newState) {
-            // Just turn on visually
-            // We won't schedule yet until the user hits "Save Schedule"
-            // BUT if we want it to be "on" immediately with defaults, we can.
-            // However, user said "every change triggers this log", implying they are in the picker flow.
-            // If we decouple completely, 'toggleSwitch' just sets enabled state.
-            // But we need to make sure we have permissions first.
+            // Turning ON
             const settings = await Notifications.getPermissionsAsync();
-            if (settings.granted || settings.ios?.status === 3) {
-                setPushEnabled(true);
-            } else {
+            let hasPermission = settings.granted || settings.ios?.status === 3;
+
+            if (!hasPermission) {
                 const { status } = await Notifications.requestPermissionsAsync();
-                if (status === 'granted') {
-                    setPushEnabled(true);
-                } else {
-                    Alert.alert("Berechtigung erforderlich", "Bitte aktiviere Benachrichtigungen, um diese Funktion zu nutzen.");
-                    setPushEnabled(false);
-                }
+                hasPermission = status === 'granted';
+            }
+
+            if (hasPermission) {
+                setPushEnabled(true);
+                await AsyncStorage.setItem('weeklyReminderEnabled', 'true');
+            } else {
+                Alert.alert("Berechtigung erforderlich", "Bitte aktiviere Benachrichtigungen, um diese Funktion zu nutzen.");
+                setPushEnabled(false);
+                await AsyncStorage.setItem('weeklyReminderEnabled', 'false');
             }
         } else {
             // Turning OFF
             await cancelAllNotifications();
             setPushEnabled(false);
+            await AsyncStorage.setItem('weeklyReminderEnabled', 'false');
         }
     };
 
@@ -125,20 +145,23 @@ export default function ProfileModal({ visible, onClose }) {
         setShowLogoutConfirm(true);
     };
 
+    // Dynamic styles
+    const styles = getStyles(colors);
+
     return (
         <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
             <View style={styles.container}>
                 <View style={styles.header}>
                     <Text style={styles.title}>Profil</Text>
                     <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                        <Ionicons name="close" size={24} color={Colors.text} />
+                        <Ionicons name="close" size={24} color={colors.text} />
                     </TouchableOpacity>
                 </View>
 
-                <View style={styles.content}>
+                <ScrollView style={styles.content} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                     <View style={styles.profileCard}>
                         <View style={styles.avatarContainer}>
-                            <Ionicons name="person" size={40} color={Colors.primary} />
+                            <Ionicons name="person" size={40} color={colors.primary} />
                         </View>
                         <View style={styles.userInfo}>
                             <Text style={styles.userLabel}>Angemeldet als</Text>
@@ -149,15 +172,32 @@ export default function ProfileModal({ visible, onClose }) {
                     </View>
 
                     <View style={styles.section}>
+                        <Text style={styles.sectionHeader}>Darstellung</Text>
+                        <View style={styles.menuItem}>
+                            <View style={styles.menuItemIcon}>
+                                <Ionicons name={theme === 'dark' ? "moon-outline" : "sunny-outline"} size={24} color={colors.text} />
+                            </View>
+                            <Text style={[styles.menuItemText, { flex: 1 }]}>Dunkelmodus</Text>
+                            <Switch
+                                trackColor={{ false: "#767577", true: colors.primary }}
+                                thumbColor={theme === 'dark' ? "#f4f3f4" : "#f4f3f4"}
+                                ios_backgroundColor="#3e3e3e"
+                                onValueChange={toggleTheme}
+                                value={theme === 'dark'}
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.section}>
                         <Text style={styles.sectionHeader}>Einstellungen</Text>
 
                         <View style={styles.menuItem}>
                             <View style={styles.menuItemIcon}>
-                                <Ionicons name="notifications-outline" size={24} color={Colors.text} />
+                                <Ionicons name="notifications-outline" size={24} color={colors.text} />
                             </View>
                             <Text style={[styles.menuItemText, { flex: 1 }]}>Erinnerung planen</Text>
                             <Switch
-                                trackColor={{ false: "#767577", true: Colors.primary }}
+                                trackColor={{ false: "#767577", true: colors.primary }}
                                 thumbColor={pushEnabled ? "#f4f3f4" : "#f4f3f4"}
                                 ios_backgroundColor="#3e3e3e"
                                 onValueChange={toggleSwitch}
@@ -165,34 +205,23 @@ export default function ProfileModal({ visible, onClose }) {
                             />
                         </View>
 
-
-
                         {pushEnabled && (
                             <>
                                 <TouchableOpacity style={styles.menuItem} onPress={showDayActionSheet}>
                                     <View style={styles.menuItemIcon}>
-                                        <Ionicons name="calendar-outline" size={24} color={Colors.text} />
+                                        <Ionicons name="calendar-outline" size={24} color={colors.text} />
                                     </View>
                                     <Text style={[styles.menuItemText, { flex: 1 }]}>Erinnerungstag</Text>
-                                    <Text style={{ color: Colors.primary, fontWeight: '600' }}>{getDayLabel(selectedDay)}</Text>
+                                    <Text style={{ color: colors.primary, fontWeight: '600' }}>{getDayLabel(selectedDay)}</Text>
                                     <Ionicons name="chevron-forward" size={16} color="#666" style={{ marginLeft: 8 }} />
                                 </TouchableOpacity>
 
                                 <View style={styles.menuItem}>
                                     <View style={styles.menuItemIcon}>
-                                        <Ionicons name="time-outline" size={24} color={Colors.text} />
+                                        <Ionicons name="time-outline" size={24} color={colors.text} />
                                     </View>
                                     <Text style={[styles.menuItemText, { flex: 1 }]}>Erinnerungszeit</Text>
-                                    <TouchableOpacity
-                                        style={styles.timePickerButton}
-                                        onPress={() => setShowTimePicker(true)}
-                                    >
-                                        <Text style={styles.timePickerButtonText}>
-                                            {reminderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    {(showTimePicker || Platform.OS === 'ios' || Platform.OS === 'web') && (
+                                    {Platform.OS === 'web' ? (
                                         <DateTimePicker
                                             testID="dateTimePicker"
                                             value={reminderTime}
@@ -200,14 +229,38 @@ export default function ProfileModal({ visible, onClose }) {
                                             is24Hour={true}
                                             display="default"
                                             onChange={onTimeChange}
-                                            themeVariant="dark"
-                                            style={Platform.OS === 'ios' ? { width: 100 } : undefined}
+                                            themeVariant={theme}
+                                            style={{ minWidth: 100 }}
                                         />
+                                    ) : (
+                                        <>
+                                            <TouchableOpacity
+                                                style={styles.timePickerButton}
+                                                onPress={() => setShowTimePicker(true)}
+                                            >
+                                                <Text style={styles.timePickerButtonText}>
+                                                    {reminderTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </Text>
+                                            </TouchableOpacity>
+
+                                            {(showTimePicker || Platform.OS === 'ios') && (
+                                                <DateTimePicker
+                                                    testID="dateTimePicker"
+                                                    value={reminderTime}
+                                                    mode="time"
+                                                    is24Hour={true}
+                                                    display="default"
+                                                    onChange={onTimeChange}
+                                                    themeVariant={theme}
+                                                    style={Platform.OS === 'ios' ? { width: 100 } : undefined}
+                                                />
+                                            )}
+                                        </>
                                     )}
                                 </View>
 
                                 <TouchableOpacity
-                                    style={[styles.menuItem, { backgroundColor: Colors.primary, justifyContent: 'center', marginTop: 10 }]}
+                                    style={[styles.menuItem, { backgroundColor: colors.primary, justifyContent: 'center', marginTop: 10 }]}
                                     onPress={() => handleSchedule(true, selectedDay, reminderTime)}
                                 >
                                     <Text style={[styles.menuItemText, { color: '#fff', fontWeight: 'bold' }]}>Zeitplan speichern</Text>
@@ -231,12 +284,12 @@ export default function ProfileModal({ visible, onClose }) {
                         <Text style={styles.sectionHeader}>App Info</Text>
                         <View style={styles.menuItem}>
                             <View style={styles.menuItemIcon}>
-                                <Ionicons name="code-slash-outline" size={24} color={Colors.text} />
+                                <Ionicons name="code-slash-outline" size={24} color={colors.text} />
                             </View>
                             <Text style={styles.menuItemText}>Version 1.0.0</Text>
                         </View>
                     </View>
-                </View>
+                </ScrollView>
 
                 {/* Android Day Picker Modal */}
                 <Modal visible={showDayPicker} transparent animationType="fade">
@@ -255,12 +308,12 @@ export default function ProfileModal({ visible, onClose }) {
                                 >
                                     <Text style={[
                                         styles.dayOptionText,
-                                        selectedDay === day.value && { color: Colors.primary }
+                                        selectedDay === day.value && { color: colors.primary }
                                     ]}>
                                         {day.label}
                                     </Text>
                                     {selectedDay === day.value && (
-                                        <Ionicons name="checkmark" size={20} color={Colors.primary} />
+                                        <Ionicons name="checkmark" size={20} color={colors.primary} />
                                     )}
                                 </TouchableOpacity>
                             ))}
@@ -280,15 +333,26 @@ export default function ProfileModal({ visible, onClose }) {
                     confirmText="Abmelden"
                     type="destructive"
                 />
+
+                <ConfirmModal
+                    visible={showScheduleSuccess}
+                    onClose={() => setShowScheduleSuccess(false)}
+                    onConfirm={() => setShowScheduleSuccess(false)}
+                    title="Erfolg"
+                    message={`Wöchentliche Erinnerung aktiviert!\nDu wirst jeden ${getDayLabel(selectedDay)} um ${reminderTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} benachrichtigt.`}
+                    confirmText="OK"
+                    cancelText={null}
+                    type="default"
+                />
             </View>
         </Modal>
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
         padding: 20,
     },
     header: {
@@ -301,23 +365,30 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: Colors.text,
+        color: colors.text,
     },
     closeButton: {
         padding: 5,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: theme => theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
         borderRadius: 15,
     },
     content: {
         flex: 1,
     },
+    scrollContent: {
+        paddingBottom: 40,
+    },
     profileCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.card,
+        backgroundColor: colors.card,
         padding: 20,
         borderRadius: 16,
         marginBottom: 30,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     avatarContainer: {
         width: 60,
@@ -337,7 +408,7 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     userEmail: {
-        color: Colors.text,
+        color: colors.text,
         fontSize: 16,
         fontWeight: '700',
     },
@@ -345,7 +416,7 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     sectionHeader: {
-        color: '#666',
+        color: '#888',
         fontSize: 13,
         fontWeight: '700',
         marginBottom: 10,
@@ -354,27 +425,31 @@ const styles = StyleSheet.create({
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: Colors.card,
+        backgroundColor: colors.card,
         padding: 16,
         borderRadius: 12,
         marginBottom: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
     },
     menuItemIcon: {
         marginRight: 16,
     },
     menuItemText: {
-        color: Colors.text,
+        color: colors.text,
         fontSize: 16,
         fontWeight: '600',
     },
     timePickerButton: {
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: 'rgba(128,128,128,0.1)',
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 8,
     },
     timePickerButtonText: {
-        color: Colors.primary,
+        color: colors.primary,
         fontSize: 16,
         fontWeight: 'bold',
     },
@@ -386,7 +461,7 @@ const styles = StyleSheet.create({
         padding: 40,
     },
     dayPickerContent: {
-        backgroundColor: Colors.card,
+        backgroundColor: colors.card,
         width: '100%',
         borderRadius: 20,
         padding: 20,
@@ -397,7 +472,7 @@ const styles = StyleSheet.create({
         elevation: 10,
     },
     dayPickerTitle: {
-        color: Colors.text,
+        color: colors.text,
         fontSize: 18,
         fontWeight: 'bold',
         marginBottom: 20,
@@ -409,10 +484,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 15,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.05)',
+        borderBottomColor: 'rgba(128,128,128,0.1)',
     },
     dayOptionText: {
-        color: Colors.text,
+        color: colors.text,
         fontSize: 16,
         fontWeight: '500',
     },

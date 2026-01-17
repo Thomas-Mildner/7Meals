@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { View, Text, TextInput, Modal, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
-import { Colors } from '../constants/Colors';
+import { useTheme } from '../context/ThemeContext';
 
 export default function AddMealModal({ visible, onClose, onAdd }) {
+    const { colors, theme } = useTheme();
     const [name, setName] = useState('');
     const [categories, setCategories] = useState([]);
+
+    // Dynamic styles
+    const styles = getStyles(colors, theme);
 
     const handleAdd = async () => {
         if (name && categories.length > 0) {
@@ -51,7 +55,7 @@ export default function AddMealModal({ visible, onClose, onAdd }) {
                     <TextInput
                         style={styles.input}
                         placeholder="Gericht Name (z.B. Spätzle)"
-                        placeholderTextColor="#999"
+                        placeholderTextColor={theme === 'dark' ? "#999" : "#666"}
                         value={name}
                         onChangeText={setName}
                     />
@@ -65,11 +69,11 @@ export default function AddMealModal({ visible, onClose, onAdd }) {
                                     style={[
                                         styles.categoryChip,
                                         isSelected && styles.selectedCategory,
-                                        { borderColor: Colors[cat] }
+                                        { borderColor: colors[cat] }
                                     ]}
                                     onPress={() => toggleCategory(cat)}
                                 >
-                                    <Text style={[styles.categoryText, isSelected && styles.selectedCategoryText]}>
+                                    <Text style={[styles.categoryText, isSelected && styles.selectedCategoryText, { color: isSelected ? '#fff' : colors.text }]}>
                                         {getCategoryLabel(cat)}
                                     </Text>
                                 </TouchableOpacity>
@@ -95,7 +99,7 @@ export default function AddMealModal({ visible, onClose, onAdd }) {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors, theme) => StyleSheet.create({
     centeredView: {
         flex: 1,
         justifyContent: 'center',
@@ -104,7 +108,7 @@ const styles = StyleSheet.create({
     },
     modalView: {
         width: '90%',
-        backgroundColor: Colors.card,
+        backgroundColor: colors.card,
         borderRadius: 20,
         padding: 20,
         alignItems: 'center',
@@ -117,13 +121,13 @@ const styles = StyleSheet.create({
     modalTitle: {
         fontSize: 24,
         fontWeight: 'bold',
-        color: Colors.text,
+        color: colors.text,
         marginBottom: 20,
     },
     input: {
         width: '100%',
-        backgroundColor: Colors.background,
-        color: Colors.text,
+        backgroundColor: colors.background,
+        color: colors.text,
         padding: 15,
         borderRadius: 10,
         marginBottom: 20,
@@ -142,10 +146,10 @@ const styles = StyleSheet.create({
         borderWidth: 1,
     },
     selectedCategory: {
-        backgroundColor: 'rgba(255,255,255,0.2)',
+        backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
     },
     categoryText: {
-        color: Colors.text,
+        color: colors.text,
         fontWeight: '600',
     },
     selectedCategoryText: {
@@ -167,7 +171,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#ff4444',
     },
     addButton: {
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
     },
     disabledButton: {
         opacity: 0.5,

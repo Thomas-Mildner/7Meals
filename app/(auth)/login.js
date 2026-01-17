@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../../config/firebaseConfig';
+import { useTheme } from '../../context/ThemeContext';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -19,6 +19,11 @@ export default function LoginScreen() {
     const [isLoading, setIsLoading] = useState(false);
 
     const { loginWithEmail, registerWithEmail, loginAnonymously, loginWithCredential, googleProvider } = useAuth();
+    const { colors, theme } = useTheme();
+
+    // Dynamic styles
+    const styles = getStyles(colors, theme);
+
     const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
         clientId: '153120469629-eg71199k32r5vn5tf4m6nqqnc01dcoua.apps.googleusercontent.com',
         iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com', // Placeholder
@@ -89,7 +94,9 @@ export default function LoginScreen() {
             style={styles.container}
         >
             <LinearGradient
-                colors={['#264653', '#1D3557']}
+                // Dark: Dark BG -> Dark Card (Blueish)
+                // Light: Light BG -> White
+                colors={theme === 'dark' ? ['#264653', '#1D3557'] : ['#e0f7fa', '#ffffff']}
                 style={styles.background}
             />
 
@@ -97,7 +104,7 @@ export default function LoginScreen() {
 
                 <View style={styles.headerContainer}>
                     <View style={styles.iconContainer}>
-                        <Ionicons name="restaurant" size={40} color={Colors.primary} />
+                        <Ionicons name="restaurant" size={40} color={colors.primary} />
                     </View>
                     <Text style={styles.appName}>7MEALS</Text>
                     <Text style={styles.tagline}>Plane deine Woche, iss besser.</Text>
@@ -114,11 +121,11 @@ export default function LoginScreen() {
                     </View>
 
                     <View style={styles.inputWrapper}>
-                        <Ionicons name="mail-outline" size={20} color="#888" style={styles.inputIcon} />
+                        <Ionicons name="mail-outline" size={20} color={theme === 'dark' ? "#888" : "#666"} style={styles.inputIcon} />
                         <TextInput
                             style={styles.input}
                             placeholder="E-Mail"
-                            placeholderTextColor="#888"
+                            placeholderTextColor={theme === 'dark' ? "#888" : "#999"}
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
@@ -127,11 +134,11 @@ export default function LoginScreen() {
                     </View>
 
                     <View style={styles.inputWrapper}>
-                        <Ionicons name="lock-closed-outline" size={20} color="#888" style={styles.inputIcon} />
+                        <Ionicons name="lock-closed-outline" size={20} color={theme === 'dark' ? "#888" : "#666"} style={styles.inputIcon} />
                         <TextInput
                             style={styles.input}
                             placeholder="Passwort"
-                            placeholderTextColor="#888"
+                            placeholderTextColor={theme === 'dark' ? "#888" : "#999"}
                             secureTextEntry
                             value={password}
                             onChangeText={setPassword}
@@ -177,7 +184,7 @@ export default function LoginScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors, theme) => StyleSheet.create({
     container: {
         flex: 1,
     },
@@ -201,33 +208,41 @@ const styles = StyleSheet.create({
         width: 80,
         height: 80,
         borderRadius: 40,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.8)',
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
     },
     appName: {
         fontSize: 32,
         fontWeight: '800',
-        color: '#fff',
+        color: colors.text,
         letterSpacing: 2,
     },
     tagline: {
-        color: '#ccc',
+        color: theme === 'dark' ? '#ccc' : '#555',
         fontSize: 16,
         marginTop: 8,
     },
     formContainer: {
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)',
         borderRadius: 24,
         padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.05,
+        shadowRadius: 20,
     },
     tabContainer: {
         flexDirection: 'row',
         marginBottom: 24,
-        backgroundColor: 'rgba(0,0,0,0.2)',
+        backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
         borderRadius: 12,
         padding: 4,
     },
@@ -238,10 +253,10 @@ const styles = StyleSheet.create({
         borderRadius: 10,
     },
     activeTab: {
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
     },
     tabText: {
-        color: '#888',
+        color: theme === 'dark' ? '#888' : '#888',
         fontWeight: '600',
     },
     activeTabText: {
@@ -251,35 +266,35 @@ const styles = StyleSheet.create({
     inputWrapper: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.3)' : '#fff',
         borderRadius: 12,
         marginBottom: 16,
         paddingHorizontal: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
+        borderColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : '#eee',
     },
     inputIcon: {
         marginRight: 12,
     },
     input: {
         flex: 1,
-        color: '#fff',
+        color: colors.text,
         paddingVertical: 16,
         fontSize: 16,
     },
     mainButton: {
-        backgroundColor: Colors.secondary,
+        backgroundColor: colors.secondary,
         borderRadius: 12,
         paddingVertical: 16,
         alignItems: 'center',
         marginTop: 8,
-        shadowColor: Colors.secondary,
+        shadowColor: colors.secondary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
     },
     mainButtonText: {
-        color: '#fff',
+        color: '#fff', // Secondary is usually bright enough for white text
         fontWeight: 'bold',
         fontSize: 16,
     },
@@ -288,7 +303,7 @@ const styles = StyleSheet.create({
         marginTop: 16,
     },
     guestButtonText: {
-        color: '#ccc',
+        color: theme === 'dark' ? '#ccc' : '#666',
         fontSize: 14,
         textDecorationLine: 'underline',
     },
@@ -300,10 +315,10 @@ const styles = StyleSheet.create({
     line: {
         flex: 1,
         height: 1,
-        backgroundColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
     },
     dividerText: {
-        color: '#666',
+        color: theme === 'dark' ? '#666' : '#888',
         marginHorizontal: 16,
         fontSize: 12,
     },

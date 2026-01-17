@@ -4,13 +4,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getMessaging } from 'firebase/messaging';
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDnI55SQ9P5TixQsfridnIJxb9ZBE0HvEg",
-    authDomain: "meals-af1c6.firebaseapp.com",
-    projectId: "meals-af1c6",
-    storageBucket: "meals-af1c6.firebasestorage.app",
-    messagingSenderId: "153120469629",
-    appId: "1:153120469629:web:f38224f0a727da7de87714",
-    measurementId: "G-DH496B0SBQ"
+    apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+    measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig);

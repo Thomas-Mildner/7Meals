@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicato
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useMeals } from '../../hooks/useMeals';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../context/ThemeContext';
 import AddMealModal from '../../components/AddMealModal';
 import ProfileModal from '../../components/ProfileModal';
 import { useAuth } from '../../context/AuthContext';
@@ -12,8 +12,12 @@ import { useAuth } from '../../context/AuthContext';
 export default function MealsScreen() {
     const { meals, loading, addMeal, removeMeal, toggleFavorite, refreshMeals } = useMeals();
     const { user } = useAuth();
+    const { colors, theme } = useTheme();
     const [modalVisible, setModalVisible] = useState(false);
     const [profileModalVisible, setProfileModalVisible] = useState(false);
+
+    // Dynamic Styles
+    const styles = getStyles(colors, theme);
 
     const getCategoryLabel = (cat) => {
         switch (cat) {
@@ -26,13 +30,13 @@ export default function MealsScreen() {
 
     const renderItem = ({ item }) => (
         <LinearGradient
-            colors={[Colors.card, '#2a2a2a']}
+            colors={[colors.card, theme === 'dark' ? '#2a2a2a' : '#e6e6e6']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.mealCard}
         >
             {/* <View style={[styles.categoryStrip, { backgroundColor: Colors[item.category] }]} /> - Removing single color strip */}
-            <View style={[styles.categoryStrip, { backgroundColor: '#444' }]} />
+            <View style={[styles.categoryStrip, { backgroundColor: theme === 'dark' ? '#444' : '#ddd' }]} />
 
             <View style={styles.mealContent}>
                 <View style={styles.mealHeader}>
@@ -55,8 +59,8 @@ export default function MealsScreen() {
 
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                     {item.categories && Array.isArray(item.categories) && item.categories.map(cat => (
-                        <View key={cat} style={[styles.categoryBadge, { backgroundColor: Colors[cat] + '20' }]}>
-                            <Text style={[styles.categoryText, { color: Colors[cat] }]}>
+                        <View key={cat} style={[styles.categoryBadge, { backgroundColor: colors[cat] + '20' }]}>
+                            <Text style={[styles.categoryText, { color: colors[cat] }]}>
                                 {getCategoryLabel(cat)}
                             </Text>
                         </View>
@@ -68,9 +72,9 @@ export default function MealsScreen() {
 
     // Prepare Sections (Safe filtering)
     const sections = [
-        { title: 'FLEISCH', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('meat')), key: 'meat', color: Colors.meat },
-        { title: 'FISCH', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('fish')), key: 'fish', color: Colors.fish },
-        { title: 'VEGGIE', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('veg')), key: 'veg', color: Colors.veg },
+        { title: 'FLEISCH', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('meat')), key: 'meat', color: colors.meat },
+        { title: 'FISCH', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('fish')), key: 'fish', color: colors.fish },
+        { title: 'VEGGIE', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('veg')), key: 'veg', color: colors.veg },
     ];
 
     // Filter out empty sections if desired, or keep to show empty state per section?
@@ -102,17 +106,17 @@ export default function MealsScreen() {
                         <Ionicons name="add" size={26} color="#fff" />
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.iconButton, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
+                        style={[styles.iconButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
                         onPress={() => setProfileModalVisible(true)}
                     >
-                        <Ionicons name="person-outline" size={22} color={Colors.text} />
+                        <Ionicons name="person-outline" size={22} color={colors.text} />
                     </TouchableOpacity>
                 </View>
             </View>
 
             {loading && meals.length === 0 ? (
                 <View style={styles.centerContainer}>
-                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <ActivityIndicator size="large" color={colors.primary} />
                     <Text style={styles.loadingText}>Lade Gerichte...</Text>
                 </View>
             ) : (
@@ -126,7 +130,7 @@ export default function MealsScreen() {
                     ListEmptyComponent={
                         <View style={styles.emptyContainer}>
                             <View style={styles.emptyIconContainer}>
-                                <Ionicons name="restaurant-outline" size={60} color={Colors.primary} />
+                                <Ionicons name="restaurant-outline" size={60} color={colors.primary} />
                             </View>
                             <Text style={styles.emptyTitle}>Noch keine Gerichte</Text>
                             <Text style={styles.emptyText}>
@@ -151,10 +155,10 @@ export default function MealsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors, theme) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.background,
+        backgroundColor: colors.background,
         paddingTop: 60,
     },
     header: {
@@ -173,7 +177,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 34,
         fontWeight: '800',
-        color: Colors.text,
+        color: colors.text,
         letterSpacing: -1,
     },
     headerActions: {
@@ -196,14 +200,14 @@ const styles = StyleSheet.create({
         backgroundColor: '#4a5568',
     },
     addButton: {
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
     },
     listContent: {
         paddingHorizontal: 20,
         paddingBottom: 40,
     },
     mealCard: {
-        backgroundColor: Colors.card,
+        backgroundColor: colors.card,
         borderRadius: 16,
         marginBottom: 16,
         flexDirection: 'row',
@@ -236,7 +240,7 @@ const styles = StyleSheet.create({
     mealName: {
         fontSize: 18,
         fontWeight: '700',
-        color: Colors.text,
+        color: colors.text,
         flex: 1,
         marginRight: 10,
     },
@@ -277,7 +281,7 @@ const styles = StyleSheet.create({
     emptyTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        color: Colors.text,
+        color: colors.text,
         marginBottom: 10,
     },
     emptyText: {
