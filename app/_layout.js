@@ -10,7 +10,7 @@ import { Platform } from 'react-native';
 import { useEffect } from 'react';
 import { messaging } from '../config/firebaseConfig';
 import { getToken } from 'firebase/messaging';
-import { Analytics } from '@vercel/analytics/next';
+import { Analytics } from '@vercel/analytics/react';
 
 // Replace with your VAPID key from Firebase Console -> Project Settings -> Cloud Messaging -> Web Push Certificates
 const VAPID_KEY = process.env.EXPO_PUBLIC_VAPID_KEY;
@@ -187,6 +187,7 @@ function AppLayout() {
                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                     <Stack.Screen name="(auth)" options={{ headerShown: false }} />
                 </Stack>
+                {Platform.OS === 'web' && <Analytics />}
             </MealProvider>
         </AuthProvider>
     );
