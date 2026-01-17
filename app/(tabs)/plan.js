@@ -14,7 +14,7 @@ export default function PlanScreen() {
     const { meals, markAsEaten } = useMeals();
     const [profileModalVisible, setProfileModalVisible] = useState(false);
 
-    const totalDays = config.meat + config.fish + config.veg;
+    const totalDays = config.meat + config.fish + config.veg + config.brotzeit;
 
     const handleGenerate = () => {
         if (meals.length === 0) {
@@ -68,6 +68,7 @@ export default function PlanScreen() {
             case 'meat': return 'FLEISCH';
             case 'fish': return 'FISCH';
             case 'veg': return 'VEGGIE';
+            case 'brotzeit': return 'BROTZEIT';
             default: return cat;
         }
     };
@@ -177,6 +178,7 @@ export default function PlanScreen() {
                     {renderConfigCounter('Fleisch', 'meat')}
                     {renderConfigCounter('Fisch', 'fish')}
                     {renderConfigCounter('Veggie', 'veg')}
+                    {renderConfigCounter('Brotzeit', 'brotzeit')}
                 </View>
 
                 <TouchableOpacity

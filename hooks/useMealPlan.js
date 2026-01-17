@@ -9,7 +9,7 @@ export const useMealPlan = () => {
     const { user } = useAuth();
     const [plan, setPlan] = useState([]);
     const [startDate, setStartDate] = useState(null);
-    const [config, setConfig] = useState({ meat: 3, fish: 2, veg: 2 });
+    const [config, setConfig] = useState({ meat: 3, fish: 2, veg: 2, brotzeit: 0 });
     const [loadingPlan, setLoadingPlan] = useState(false);
 
     // Load plan on mount
@@ -139,6 +139,17 @@ export const useMealPlan = () => {
         newPlanDays.push(...getRandomMeals(fishMeals, config.fish));
         newPlanDays.push(...getRandomMeals(vegMeals, config.veg));
 
+        // Add Brotzeit placeholders
+        for (let i = 0; i < config.brotzeit; i++) {
+            newPlanDays.push({
+                id: `brotzeit-${Date.now()}-${i}`,
+                name: 'Brotzeit',
+                categories: ['brotzeit'],
+                isFavorite: false,
+                lastEaten: null
+            });
+        }
+
         // Shuffle
         for (let i = newPlanDays.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -181,7 +192,16 @@ export const useMealPlan = () => {
             targetCategory = currentMeal.categories[0]; // fallback to first
         }
 
-        const candidates = meals.filter(m => m.categories && m.categories.includes(targetCategory) && m.id !== currentMeal.id);
+        // If it's a Brotzeit slot (or user wants to swap TO random), force swap to a real meal?
+        // Or if user clicks swap on Brotzeit, maybe they want a real meal instead.
+        // Let's assume if category is 'brotzeit', we swap to ANY random meal from the collection
+        // to give inspiration.
+        let candidates = [];
+        if (targetCategory === 'brotzeit') {
+            candidates = meals.filter(m => m.id !== currentMeal.id);
+        } else {
+            candidates = meals.filter(m => m.categories && m.categories.includes(targetCategory) && m.id !== currentMeal.id);
+        }
 
         if (candidates.length > 0) {
             const randomNew = candidates[Math.floor(Math.random() * candidates.length)];

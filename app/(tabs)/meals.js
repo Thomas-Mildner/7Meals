@@ -7,42 +7,13 @@ import { Colors } from '../../constants/Colors';
 import AddMealModal from '../../components/AddMealModal';
 import ProfileModal from '../../components/ProfileModal';
 import { useAuth } from '../../context/AuthContext';
-import { seedDatabase } from '../../utils/seed';
+
 
 export default function MealsScreen() {
     const { meals, loading, addMeal, removeMeal, toggleFavorite, refreshMeals } = useMeals();
     const { user } = useAuth();
     const [modalVisible, setModalVisible] = useState(false);
     const [profileModalVisible, setProfileModalVisible] = useState(false);
-    const [seeding, setSeeding] = useState(false);
-
-    const handleSeed = async () => {
-        Alert.alert(
-            "Beispielgerichte hinzufügen",
-            "Dies fügt 10 Beispielgerichte zu deiner Liste hinzu. Fortfahren?",
-            [
-                { text: "Abbrechen", style: "cancel" },
-                {
-                    text: "Hinzufügen",
-                    onPress: async () => {
-                        if (!user) {
-                            Alert.alert("Fehler", "Du musst angemeldet sein, um Daten hinzuzufügen.");
-                            return;
-                        }
-                        setSeeding(true);
-                        const success = await seedDatabase(user.uid);
-                        if (success) {
-                            await refreshMeals();
-                            Alert.alert("Erfolg", "10 Beispielgerichte hinzugefügt!");
-                        } else {
-                            Alert.alert("Fehler", "Fehler beim Hinzufügen. Überprüfe deinen API-Schlüssel.");
-                        }
-                        setSeeding(false);
-                    }
-                }
-            ]
-        );
-    };
 
     const getCategoryLabel = (cat) => {
         switch (cat) {
@@ -123,17 +94,7 @@ export default function MealsScreen() {
                     <Text style={styles.title}>Sammlung</Text>
                 </View>
                 <View style={styles.headerActions}>
-                    <TouchableOpacity
-                        style={[styles.iconButton, styles.seedButton]}
-                        onPress={handleSeed}
-                        disabled={seeding}
-                    >
-                        {seeding ? (
-                            <ActivityIndicator size="small" color="#fff" />
-                        ) : (
-                            <Ionicons name="construct-outline" size={22} color="#fff" />
-                        )}
-                    </TouchableOpacity>
+
                     <TouchableOpacity
                         style={[styles.iconButton, styles.addButton]}
                         onPress={() => setModalVisible(true)}

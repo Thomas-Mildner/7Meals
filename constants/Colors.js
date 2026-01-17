@@ -8,4 +8,5 @@ export const Colors = {
     meat: '#E76F51', // Reddish
     fish: '#457B9D', // Blueish
     veg: '#2A9D8F',  // Greenish
+    brotzeit: '#A68A64', // Bread color (Brownish)
 };

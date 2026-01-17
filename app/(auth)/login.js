@@ -160,14 +160,16 @@ export default function LoginScreen() {
                         <View style={styles.line} />
                     </View>
 
-                    <View style={styles.socialRow}>
-                        <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin} disabled={isLoading}>
-                            <Ionicons name="logo-google" size={24} color="#DB4437" />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.socialButton} onPress={() => Alert.alert("Demnächst", "Apple Login muss noch konfiguriert werden.")}>
-                            <Ionicons name="logo-apple" size={24} color="#fff" />
-                        </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                        style={styles.googleButton}
+                        onPress={handleGoogleLogin}
+                        disabled={isLoading}
+                    >
+                        <View style={styles.googleButtonContent}>
+                            <Ionicons name="logo-google" size={24} color="#DB4437" style={{ marginRight: 12 }} />
+                            <Text style={styles.googleButtonText}>Weiter mit Google</Text>
+                        </View>
+                    </TouchableOpacity>
 
                 </View>
             </View>
@@ -305,19 +307,25 @@ const styles = StyleSheet.create({
         marginHorizontal: 16,
         fontSize: 12,
     },
-    socialRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        gap: 20,
-    },
-    socialButton: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        backgroundColor: 'rgba(255,255,255,0.08)',
-        justifyContent: 'center',
+    googleButton: {
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        paddingVertical: 14,
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    googleButtonContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    googleButtonText: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
     }
 });

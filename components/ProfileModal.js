@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from './PlatformDateTimePicker';
+import ConfirmModal from './ConfirmModal';
 
 const DAYS = [
     // Wait, ISO week day: 1 = Sunday? No, Notification trigger uses 1=Sunday usually
@@ -30,6 +31,8 @@ export default function ProfileModal({ visible, onClose }) {
     const [reminderTime, setReminderTime] = useState(new Date(new Date().setHours(10, 0, 0, 0)));
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [showDayPicker, setShowDayPicker] = useState(false);
+
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     useEffect(() => {
         // Check initial permission status to set toggle correctly
@@ -119,27 +122,7 @@ export default function ProfileModal({ visible, onClose }) {
     };
 
     const handleLogout = () => {
-        if (Platform.OS === 'web') {
-            if (window.confirm("Möchtest du dich wirklich abmelden?")) {
-                onClose();
-                logout();
-            }
-            return;
-        }
-
-        Alert.alert(
-            "Abmelden",
-            "Möchtest du dich wirklich abmelden?",
-            [
-                { text: "Abbrechen", style: "cancel" },
-                {
-                    text: "Abmelden", style: "destructive", onPress: () => {
-                        onClose();
-                        logout();
-                    }
-                }
-            ]
-        );
+        setShowLogoutConfirm(true);
     };
 
     return (
@@ -284,6 +267,19 @@ export default function ProfileModal({ visible, onClose }) {
                         </View>
                     </TouchableOpacity>
                 </Modal>
+
+                <ConfirmModal
+                    visible={showLogoutConfirm}
+                    onClose={() => setShowLogoutConfirm(false)}
+                    onConfirm={() => {
+                        onClose();
+                        logout();
+                    }}
+                    title="Abmelden"
+                    message="Möchtest du dich wirklich abmelden?"
+                    confirmText="Abmelden"
+                    type="destructive"
+                />
             </View>
         </Modal>
     );
