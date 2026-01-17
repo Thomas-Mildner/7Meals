@@ -35,7 +35,7 @@
 
 1.  **Clone the repository**
     ```bash
-    git clone https://github.com/yourusername/7meals.git
+    git clone https://github.com/Thomas-Mildner/7meals.git
     cd 7meals
     ```
 
