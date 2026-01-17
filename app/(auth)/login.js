@@ -1,9 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import { useAuth } from '../../context/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { auth } from '../../config/firebaseConfig';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
     // Mode: 'login' | 'register'
@@ -12,7 +18,40 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
 
-    const { loginWithEmail, registerWithEmail, loginAnonymously } = useAuth();
+    const { loginWithEmail, registerWithEmail, loginAnonymously, loginWithCredential, googleProvider } = useAuth();
+    const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+        clientId: '153120469629-eg71199k32r5vn5tf4m6nqqnc01dcoua.apps.googleusercontent.com',
+        iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com', // Placeholder
+        androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com', // Placeholder
+    });
+
+    useEffect(() => {
+        if (response?.type === 'success') {
+            const { id_token } = response.params;
+            const credential = GoogleAuthProvider.credential(id_token);
+            setIsLoading(true);
+            loginWithCredential(credential)
+                .catch((error) => {
+                    Alert.alert("Google Login fehlgeschlagen", error.message);
+                })
+                .finally(() => setIsLoading(false));
+        }
+    }, [response]);
+
+    const handleGoogleLogin = async () => {
+        setIsLoading(true);
+        try {
+            if (Platform.OS === 'web') {
+                await signInWithPopup(auth, googleProvider);
+            } else {
+                await promptAsync();
+            }
+        } catch (error) {
+            Alert.alert("Google Login Fehler", error.message);
+        } finally {
+            if (Platform.OS === 'web') setIsLoading(false);
+        }
+    };
 
     const handleSubmit = async () => {
         if (!email || !password) {
@@ -122,7 +161,7 @@ export default function LoginScreen() {
                     </View>
 
                     <View style={styles.socialRow}>
-                        <TouchableOpacity style={styles.socialButton} onPress={() => Alert.alert("Demnächst", "Google Login muss noch konfiguriert werden.")}>
+                        <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin} disabled={isLoading}>
                             <Ionicons name="logo-google" size={24} color="#DB4437" />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.socialButton} onPress={() => Alert.alert("Demnächst", "Apple Login muss noch konfiguriert werden.")}>

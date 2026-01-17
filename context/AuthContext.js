@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
 import { auth } from '../config/firebaseConfig';
 import { useRouter, useSegments } from 'expo-router';
 
@@ -44,10 +44,11 @@ export const AuthProvider = ({ children }) => {
 
     const loginWithEmail = (email, password) => signInWithEmailAndPassword(auth, email, password);
     const registerWithEmail = (email, password) => createUserWithEmailAndPassword(auth, email, password);
+    const loginWithCredential = (credential) => signInWithCredential(auth, credential);
     const logout = () => signOut(auth);
 
     return (
-        <AuthContext.Provider value={{ user, loading, loginAnonymously, loginWithEmail, registerWithEmail, logout }}>
+        <AuthContext.Provider value={{ user, loading, loginAnonymously, loginWithEmail, registerWithEmail, loginWithCredential, googleProvider: new GoogleAuthProvider(), logout }}>
             {children}
         </AuthContext.Provider>
     );
