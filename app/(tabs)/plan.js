@@ -5,6 +5,7 @@ import { useMealPlan } from '../../hooks/useMealPlan';
 import { Colors } from '../../constants/Colors';
 import { useMeals } from '../../hooks/useMeals';
 import ProfileModal from '../../components/ProfileModal';
+import ConfirmModal from '../../components/ConfirmModal';
 import { useState } from 'react';
 
 const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
@@ -13,6 +14,7 @@ export default function PlanScreen() {
     const { plan, startDate, config, updateConfig, generatePlan, swapMeal, clearPlan } = useMealPlan();
     const { meals, markAsEaten } = useMeals();
     const [profileModalVisible, setProfileModalVisible] = useState(false);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
 
     const totalDays = config.meat + config.fish + config.veg + config.brotzeit;
 
@@ -36,10 +38,7 @@ export default function PlanScreen() {
     };
 
     const handleClear = () => {
-        Alert.alert("Plan löschen", "Möchtest du den aktuellen Plan wirklich löschen?", [
-            { text: "Abbrechen", style: "cancel" },
-            { text: "Löschen", style: "destructive", onPress: clearPlan }
-        ]);
+        setShowClearConfirm(true);
     }
 
     const renderConfigCounter = (label, type) => (
@@ -198,6 +197,7 @@ export default function PlanScreen() {
                 renderItem={renderDayItem}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
+                style={{ flex: 1 }}
                 ListEmptyComponent={
                     <View style={styles.emptyContainer}>
                         <Ionicons name="calendar-clear-outline" size={80} color="#333" />
@@ -209,6 +209,15 @@ export default function PlanScreen() {
             < ProfileModal
                 visible={profileModalVisible}
                 onClose={() => setProfileModalVisible(false)}
+            />
+            <ConfirmModal
+                visible={showClearConfirm}
+                onClose={() => setShowClearConfirm(false)}
+                onConfirm={clearPlan}
+                title="Plan löschen"
+                message="Möchtest du den aktuellen Plan wirklich löschen?"
+                confirmText="Löschen"
+                type="destructive"
             />
         </View >
     );
@@ -319,7 +328,7 @@ const styles = StyleSheet.create({
     },
     listContent: {
         paddingHorizontal: 20,
-        paddingBottom: 40,
+        paddingBottom: 100, // Increased for mobile nav bars
     },
     dayCard: {
         backgroundColor: Colors.card,
