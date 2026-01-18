@@ -82,7 +82,7 @@ export default function LoginScreen() {
         try {
             await loginAnonymously();
         } catch (error) {
-            Alert.alert("Fehler", "Anmeldung als Gast fehlgeschlagen.");
+            Alert.alert("Fehler", "Anmeldung für Demo Zugang fehlgeschlagen.");
         } finally {
             setIsLoading(false);
         }
@@ -158,7 +158,7 @@ export default function LoginScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={handleGuest} disabled={isLoading} style={styles.guestButton}>
-                        <Text style={styles.guestButtonText}>Als Gast fortfahren</Text>
+                        <Text style={styles.guestButtonText}>Demo Zugang</Text>
                     </TouchableOpacity>
 
                     <View style={styles.divider}>

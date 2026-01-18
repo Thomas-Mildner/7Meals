@@ -35,7 +35,10 @@ export const AuthProvider = ({ children }) => {
 
     const loginAnonymously = async () => {
         try {
-            await signInAnonymously(auth);
+            const result = await signInAnonymously(auth);
+            // Auto-seed for demo mode
+            const { seedDatabase } = await import('../utils/seed');
+            await seedDatabase(result.user.uid);
         } catch (e) {
             console.error(e);
             throw e;

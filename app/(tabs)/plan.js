@@ -12,8 +12,8 @@ import { useEffect } from 'react';
 const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
 export default function PlanScreen() {
-    const { plan, startDate, config, updateConfig, generatePlan, swapMeal, clearPlan } = useMealPlan();
-    const { meals, markAsEaten } = useMeals();
+    const { plan, startDate, config, updateConfig, generatePlan, swapMeal, clearPlan, toggleMealEaten } = useMealPlan();
+    const { meals } = useMeals();
     const { colors, theme } = useTheme();
     const [profileModalVisible, setProfileModalVisible] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -92,11 +92,8 @@ export default function PlanScreen() {
     };
 
     const renderDayItem = ({ item, index }) => {
-        // Find the live meal object to get reactive updates
-        const liveMeal = meals.find(m => m.id === item.id) || item;
-
-        // Simple heuristic: if eaten today, show check
-        const isEatenToday = liveMeal.lastEaten && new Date(liveMeal.lastEaten).toDateString() === new Date().toDateString();
+        // Use the eaten state directly from the plan slot
+        const isEaten = !!item.isEaten;
 
         // Calculate date for this day box
         let dateLabel = "";
@@ -120,22 +117,22 @@ export default function PlanScreen() {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <TouchableOpacity
-                            onPress={() => markAsEaten(item.id)}
+                            onPress={() => toggleMealEaten(index)}
                             style={[
                                 styles.eatenButton,
-                                isEatenToday ? styles.eatenButtonActive : styles.eatenButtonInactive
+                                isEaten ? styles.eatenButtonActive : styles.eatenButtonInactive
                             ]}
                         >
                             <Ionicons
-                                name={isEatenToday ? "checkmark-circle" : "ellipse-outline"}
+                                name={isEaten ? "checkmark-circle" : "ellipse-outline"}
                                 size={18}
-                                color={isEatenToday ? "#fff" : "#888"}
+                                color={isEaten ? "#fff" : "#888"}
                             />
                             <Text style={[
                                 styles.eatenButtonText,
-                                { color: isEatenToday ? "#fff" : "#888" }
+                                { color: isEaten ? "#fff" : "#888" }
                             ]}>
-                                {isEatenToday ? "Gegessen" : "Essen"}
+                                {isEaten ? "Gegessen" : "Essen"}
                             </Text>
                         </TouchableOpacity>
 

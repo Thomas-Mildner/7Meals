@@ -247,5 +247,41 @@ export const useMealPlan = () => {
         if (user) await savePlanService(user.uid, { days: [], startDate: null });
     };
 
-    return { plan, startDate, config, updateConfig, generatePlan, swapMeal, clearPlan, loadingPlan };
+    const toggleMealEaten = async (index) => {
+        if (!plan[index]) return;
+
+        const updatedPlan = [...plan];
+        const isCurrentlyEaten = !!updatedPlan[index].isEaten;
+        updatedPlan[index] = {
+            ...updatedPlan[index],
+            isEaten: !isCurrentlyEaten
+        };
+
+        setPlan(updatedPlan);
+
+        // Persist to plan service
+        if (user) {
+            try {
+                await savePlanService(user.uid, {
+                    days: updatedPlan,
+                    startDate
+                });
+            } catch (e) {
+                console.error("Failed to save plan after toggle", e);
+            }
+        }
+
+        // If marking as eaten, update the meal's global lastEaten for weighting
+        if (!isCurrentlyEaten) {
+            try {
+                const today = new Date().toISOString();
+                await updateLastEatenDate(updatedPlan[index].id, today);
+                await refreshMeals(); // Refresh global meal list to update scores
+            } catch (e) {
+                console.error("Failed to update global lastEaten", e);
+            }
+        }
+    };
+
+    return { plan, startDate, config, updateConfig, generatePlan, swapMeal, clearPlan, toggleMealEaten, loadingPlan };
 };

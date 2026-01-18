@@ -9,8 +9,12 @@ const DEMO_MEALS = [
     { name: 'Forelle Müllerin', category: 'fish' },
     { name: 'Kartoffelsuppe', category: 'veg' },
     { name: 'Currywurst', category: 'meat' },
-    { name: 'Bratwurst mit Sauerkraut', category: 'meat' },
+    { name: 'Brotzeitplatte', category: 'brotzeit' },
+    { name: 'Wurstsalat', category: 'meat' },
     { name: 'Thunfischsalat', category: 'fish' },
+    { name: 'Spaghetti Carbonara', category: 'meat' },
+    { name: 'Linseneintopf', category: 'veg' },
+    { name: 'Gebackener Camembert', category: 'veg' },
 ];
 
 export const seedDatabase = async (userId) => {

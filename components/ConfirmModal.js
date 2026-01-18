@@ -1,7 +1,7 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
-import { Colors } from '../constants/Colors';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 export default function ConfirmModal({
     visible,
@@ -13,6 +13,9 @@ export default function ConfirmModal({
     cancelText = "Abbrechen",
     type = "default" // 'default' | 'destructive'
 }) {
+    const { colors, theme } = useTheme();
+    const styles = getStyles(colors, theme);
+
     return (
         <Modal
             animationType="fade"
@@ -31,7 +34,7 @@ export default function ConfirmModal({
                         <Ionicons
                             name={type === 'destructive' ? "warning-outline" : "help-circle-outline"}
                             size={40}
-                            color={type === 'destructive' ? "#ff6b6b" : Colors.primary}
+                            color={type === 'destructive' ? "#ff6b6b" : colors.primary}
                         />
                     </View>
 
@@ -66,7 +69,7 @@ export default function ConfirmModal({
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors, theme) => StyleSheet.create({
     centeredView: {
         flex: 1,
         justifyContent: "center",
@@ -83,7 +86,7 @@ const styles = StyleSheet.create({
     modalView: {
         width: '85%',
         maxWidth: 400,
-        backgroundColor: Colors.card,
+        backgroundColor: colors.card,
         borderRadius: 20,
         padding: 24,
         alignItems: "center",
@@ -104,12 +107,12 @@ const styles = StyleSheet.create({
         textAlign: "center",
         fontSize: 20,
         fontWeight: "bold",
-        color: Colors.text,
+        color: colors.text,
     },
     modalText: {
         marginBottom: 24,
         textAlign: "center",
-        color: '#ccc',
+        color: theme === 'dark' ? '#aaa' : '#666',
         fontSize: 16,
         lineHeight: 22,
     },
@@ -126,18 +129,18 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     buttonCancel: {
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.1)',
+        borderColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
     },
     buttonConfirm: {
-        backgroundColor: Colors.primary,
+        backgroundColor: colors.primary,
     },
     buttonDestructive: {
         backgroundColor: '#ff6b6b',
     },
     textStyleCancel: {
-        color: "white",
+        color: colors.text,
         fontWeight: "bold",
         textAlign: "center"
     },

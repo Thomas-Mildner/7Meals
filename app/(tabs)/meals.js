@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -113,6 +113,15 @@ export default function MealsScreen() {
                     </TouchableOpacity>
                 </View>
             </View>
+
+            {user?.isAnonymous && (
+                <View style={styles.demoBanner}>
+                    <Ionicons name="information-circle-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
+                    <Text style={styles.demoBannerText}>
+                        Demo Zugang: Daten werden nicht gespeichert.
+                    </Text>
+                </View>
+            )}
 
             {loading && meals.length === 0 ? (
                 <View style={styles.centerContainer}>
@@ -308,5 +317,22 @@ const getStyles = (colors, theme) => StyleSheet.create({
         fontSize: 18,
         fontWeight: '800',
         letterSpacing: 1,
+    },
+    demoBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.primary + '15',
+        marginHorizontal: 20,
+        marginBottom: 16,
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.primary + '30',
+    },
+    demoBannerText: {
+        color: colors.text,
+        fontSize: 14,
+        fontWeight: '500',
+        flex: 1,
     },
 });

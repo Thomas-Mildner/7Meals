@@ -166,7 +166,7 @@ export default function ProfileModal({ visible, onClose }) {
                         <View style={styles.userInfo}>
                             <Text style={styles.userLabel}>Angemeldet als</Text>
                             <Text style={styles.userEmail}>
-                                {user?.isAnonymous ? "Gastnutzer" : user?.email || "Nutzer"}
+                                {user?.isAnonymous ? "Demo-Nutzer" : user?.email || "Nutzer"}
                             </Text>
                         </View>
                     </View>
@@ -288,7 +288,7 @@ export default function ProfileModal({ visible, onClose }) {
                             <View style={styles.menuItemIcon}>
                                 <Ionicons name="code-slash-outline" size={24} color={colors.text} />
                             </View>
-                            <Text style={styles.menuItemText}>Version 1.0.0</Text>
+                            <Text style={styles.menuItemText}>Version {require('../package.json').version}</Text>
                         </View>
                     </View>
                 </ScrollView>
