@@ -28,7 +28,9 @@ export default function FriendMealsModal({ visible, onClose }) {
             setFriendMeals(results);
             setSearched(true);
         } catch (err) {
-            Alert.alert('Fehler', 'Fehler beim Suchen der Gerichte.');
+            console.error('Search error:', err);
+            Alert.alert('Fehler', err?.message || 'Fehler beim Suchen der Gerichte.');
+            setSearched(true);
         } finally {
             setSearching(false);
         }

@@ -100,7 +100,8 @@ export const MealProvider = ({ children }) => {
         // Optimistic update
         setMeals(prev => prev.map(m => m.id === id ? { ...m, isShared } : m));
         try {
-            await toggleMealShared(id, isShared);
+            const ownerEmail = user?.email || '';
+            await toggleMealShared(id, isShared, ownerEmail);
         } catch (err) {
             setError(err);
             setMeals(prev => prev.map(m => m.id === id ? { ...m, isShared: !isShared } : m));

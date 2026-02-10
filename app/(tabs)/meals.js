@@ -50,7 +50,13 @@ export default function MealsScreen() {
                         <TouchableOpacity onPress={() => { setEditingMeal(item); setEditModalVisible(true); }} hitSlop={10} style={{ marginRight: 10 }}>
                             <Ionicons name="create-outline" size={20} color={colors.primary} />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => toggleShared(item.id, !item.isShared)} hitSlop={10} style={{ marginRight: 10 }}>
+                        <TouchableOpacity onPress={() => {
+                            if (user?.isAnonymous || !user?.email) {
+                                Alert.alert('Login erforderlich', 'Um Gerichte zu teilen, musst du mit einer E-Mail-Adresse angemeldet sein.');
+                                return;
+                            }
+                            toggleShared(item.id, !item.isShared);
+                        }} hitSlop={10} style={{ marginRight: 10 }}>
                             <Ionicons name={item.isShared ? "share-social" : "share-social-outline"} size={20} color={item.isShared ? colors.primary : "#666"} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => toggleFavorite(item.id, !item.isFavorite)} hitSlop={10} style={{ marginRight: 10 }}>
@@ -152,9 +158,10 @@ export default function MealsScreen() {
             ) : (
                 <SectionList
                     sections={notEmptySections}
-                    keyExtractor={(item, index) => item.id + index} // item might appear in multiple sections
+                    keyExtractor={(item, index) => item.id + '-' + index}
                     renderItem={renderItem}
                     renderSectionHeader={renderSectionHeader}
+                    extraData={meals}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
                     ListEmptyComponent={

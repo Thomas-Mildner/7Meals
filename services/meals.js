@@ -96,10 +96,14 @@ export const updateMeal = async (id, { name, categories, description, isShared }
     }
 };
 
-export const toggleMealShared = async (id, isShared) => {
+export const toggleMealShared = async (id, isShared, ownerEmail = '') => {
     try {
         const mealRef = doc(db, MEALS_COLLECTION, id);
-        await updateDoc(mealRef, { isShared });
+        const updates = { isShared };
+        if (ownerEmail) {
+            updates.ownerEmail = ownerEmail.toLowerCase();
+        }
+        await updateDoc(mealRef, updates);
     } catch (error) {
         console.error("Error toggling shared: ", error);
         throw error;
@@ -108,15 +112,18 @@ export const toggleMealShared = async (id, isShared) => {
 
 export const getSharedMealsByEmail = async (email) => {
     try {
+        // Query only by ownerEmail to avoid Firestore composite index requirement
+        // Filter isShared client-side
         const q = query(
             collection(db, MEALS_COLLECTION),
-            where("ownerEmail", "==", email.toLowerCase()),
-            where("isShared", "==", true)
+            where("ownerEmail", "==", email.toLowerCase())
         );
         const querySnapshot = await getDocs(q);
         const meals = [];
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
+            // Only include shared meals
+            if (data.isShared !== true) return;
             let categories = data.categories || [];
             if (categories.length === 0 && data.category) {
                 categories = [data.category];
