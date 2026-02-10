@@ -1,31 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TextInput, Modal, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
-export default function AddMealModal({ visible, onClose, onAdd }) {
+export default function EditMealModal({ visible, onClose, onSave, meal }) {
     const { colors, theme } = useTheme();
     const [name, setName] = useState('');
     const [categories, setCategories] = useState([]);
     const [isShared, setIsShared] = useState(false);
     const [description, setDescription] = useState('');
 
-    // Dynamic styles
     const styles = getStyles(colors, theme);
 
-    const handleAdd = async () => {
+    // Populate fields when meal changes
+    useEffect(() => {
+        if (meal) {
+            setName(meal.name || '');
+            setCategories(meal.categories || []);
+            setIsShared(meal.isShared || false);
+            setDescription(meal.description || '');
+        }
+    }, [meal]);
+
+    const handleSave = async () => {
         if (name && categories.length > 0) {
             try {
-                await onAdd(name, categories, isShared, description.trim());
-                setName('');
-                setCategories([]);
-                setIsShared(false);
-                setDescription('');
+                await onSave(meal.id, {
+                    name: name.trim(),
+                    categories,
+                    isShared,
+                    description: description.trim(),
+                });
                 onClose();
             } catch (e) {
                 if (e.message === 'DUPLICATE_MEAL') {
-                    alert("Dieses Gericht existiert bereits!");
+                    alert("Ein anderes Gericht mit diesem Namen existiert bereits!");
                 } else {
-                    alert("Fehler beim Hinzufügen des Gerichts.");
+                    alert("Fehler beim Speichern des Gerichts.");
                 }
             }
         }
@@ -50,15 +60,17 @@ export default function AddMealModal({ visible, onClose, onAdd }) {
         }
     };
 
+    if (!meal) return null;
+
     return (
         <Modal visible={visible} animationType="slide" transparent>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.centeredView}>
                 <View style={styles.modalView}>
-                    <Text style={styles.modalTitle}>Neues Gericht hinzufügen</Text>
+                    <Text style={styles.modalTitle}>Gericht bearbeiten</Text>
 
                     <TextInput
                         style={styles.input}
-                        placeholder="Gericht Name (z.B. Spätzle)"
+                        placeholder="Gericht Name"
                         placeholderTextColor={theme === 'dark' ? "#999" : "#666"}
                         value={name}
                         onChangeText={setName}
@@ -113,11 +125,11 @@ export default function AddMealModal({ visible, onClose, onAdd }) {
                             <Text style={styles.buttonText}>Abbrechen</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.button, styles.addButton, (!name || categories.length === 0) && styles.disabledButton]}
-                            onPress={handleAdd}
+                            style={[styles.button, styles.saveButton, (!name || categories.length === 0) && styles.disabledButton]}
+                            onPress={handleSave}
                             disabled={!name || categories.length === 0}
                         >
-                            <Text style={styles.buttonText}>Hinzufügen</Text>
+                            <Text style={styles.buttonText}>Speichern</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -226,7 +238,7 @@ const getStyles = (colors, theme) => StyleSheet.create({
     cancelButton: {
         backgroundColor: '#ff4444',
     },
-    addButton: {
+    saveButton: {
         backgroundColor: colors.primary,
     },
     disabledButton: {

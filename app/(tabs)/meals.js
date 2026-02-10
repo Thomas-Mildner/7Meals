@@ -5,16 +5,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMeals } from '../../hooks/useMeals';
 import { useTheme } from '../../context/ThemeContext';
 import AddMealModal from '../../components/AddMealModal';
+import EditMealModal from '../../components/EditMealModal';
 import ProfileModal from '../../components/ProfileModal';
+import FriendMealsModal from '../../components/FriendMealsModal';
 import { useAuth } from '../../context/AuthContext';
 
 
 export default function MealsScreen() {
-    const { meals, loading, addMeal, removeMeal, toggleFavorite, refreshMeals } = useMeals();
+    const { meals, loading, addMeal, removeMeal, toggleFavorite, toggleShared, editMeal, refreshMeals } = useMeals();
     const { user } = useAuth();
     const { colors, theme } = useTheme();
     const [modalVisible, setModalVisible] = useState(false);
     const [profileModalVisible, setProfileModalVisible] = useState(false);
+    const [friendModalVisible, setFriendModalVisible] = useState(false);
+    const [editModalVisible, setEditModalVisible] = useState(false);
+    const [editingMeal, setEditingMeal] = useState(null);
 
     // Dynamic Styles
     const styles = getStyles(colors, theme);
@@ -42,6 +47,12 @@ export default function MealsScreen() {
                 <View style={styles.mealHeader}>
                     <Text style={styles.mealName}>{item.name}</Text>
                     <View style={styles.actions}>
+                        <TouchableOpacity onPress={() => { setEditingMeal(item); setEditModalVisible(true); }} hitSlop={10} style={{ marginRight: 10 }}>
+                            <Ionicons name="create-outline" size={20} color={colors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => toggleShared(item.id, !item.isShared)} hitSlop={10} style={{ marginRight: 10 }}>
+                            <Ionicons name={item.isShared ? "share-social" : "share-social-outline"} size={20} color={item.isShared ? colors.primary : "#666"} />
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={() => toggleFavorite(item.id, !item.isFavorite)} hitSlop={10} style={{ marginRight: 10 }}>
                             <Ionicons name={item.isFavorite ? "heart" : "heart-outline"} size={22} color={item.isFavorite ? "#ff6b6b" : "#666"} />
                         </TouchableOpacity>
@@ -50,6 +61,10 @@ export default function MealsScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
+
+                {item.description ? (
+                    <Text style={styles.mealDescription} numberOfLines={2}>{item.description}</Text>
+                ) : null}
 
                 {item.lastEaten && (
                     <Text style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
@@ -99,6 +114,12 @@ export default function MealsScreen() {
                 </View>
                 <View style={styles.headerActions}>
 
+                    <TouchableOpacity
+                        style={[styles.iconButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                        onPress={() => setFriendModalVisible(true)}
+                    >
+                        <Ionicons name="people-outline" size={22} color={colors.text} />
+                    </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.iconButton, styles.addButton]}
                         onPress={() => setModalVisible(true)}
@@ -159,6 +180,16 @@ export default function MealsScreen() {
             <ProfileModal
                 visible={profileModalVisible}
                 onClose={() => setProfileModalVisible(false)}
+            />
+            <FriendMealsModal
+                visible={friendModalVisible}
+                onClose={() => setFriendModalVisible(false)}
+            />
+            <EditMealModal
+                visible={editModalVisible}
+                onClose={() => { setEditModalVisible(false); setEditingMeal(null); }}
+                onSave={editMeal}
+                meal={editingMeal}
             />
         </View>
     );
@@ -252,6 +283,13 @@ const getStyles = (colors, theme) => StyleSheet.create({
         color: colors.text,
         flex: 1,
         marginRight: 10,
+    },
+    mealDescription: {
+        fontSize: 13,
+        color: '#999',
+        marginBottom: 8,
+        fontStyle: 'italic',
+        lineHeight: 18,
     },
     categoryBadge: {
         alignSelf: 'flex-start',
