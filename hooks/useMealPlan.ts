@@ -2,13 +2,16 @@ import { useState, useCallback, useEffect } from 'react';
 import { useMeals } from './useMeals';
 import { useAuth } from '../context/AuthContext';
 import { savePlan as savePlanService, getPlan as getPlanService } from '../services/plan';
+import { Meal } from '../types';
+
+type PlanMeal = Meal & { isEaten?: boolean };
 import { updateLastEatenDate } from '../services/meals';
 
 export const useMealPlan = () => {
     const { meals, refreshMeals } = useMeals();
     const { user } = useAuth();
-    const [plan, setPlan] = useState([]);
-    const [startDate, setStartDate] = useState(null);
+    const [plan, setPlan] = useState<PlanMeal[]>([]);
+    const [startDate, setStartDate] = useState<string | null>(null);
     const [config, setConfig] = useState({ meat: 2, fish: 2, veg: 2, brotzeit: 1 });
     const [loadingPlan, setLoadingPlan] = useState(false);
 
@@ -32,7 +35,7 @@ export const useMealPlan = () => {
         loadPlan();
     }, [user]);
 
-    const saveCurrentPlan = async (newPlan, newStartDate) => {
+    const saveCurrentPlan = async (newPlan: PlanMeal[], newStartDate: string) => {
         if (!user) return;
         setPlan(newPlan);
         setStartDate(newStartDate);
@@ -92,11 +95,11 @@ export const useMealPlan = () => {
         const fishMeals = meals.filter(m => m.categories && m.categories.includes('fish'));
         const vegMeals = meals.filter(m => m.categories && m.categories.includes('veg'));
 
-        const newPlanDays = [];
+        const newPlanDays: PlanMeal[] = [];
 
-        const generatedWarnings = [];
+        const generatedWarnings: string[] = [];
 
-        const getRandomMeals = (source, count, categoryLabel) => {
+        const getRandomMeals = (source: Meal[], count: number, categoryLabel: string): PlanMeal[] => {
             let pool = [...source];
             // Fallback if specific category is empty
             if (pool.length === 0) {
@@ -106,14 +109,18 @@ export const useMealPlan = () => {
                 } else {
                     // No meals at all in DB
                     generatedWarnings.push(`Keine Gerichte für '${categoryLabel}' verfügbar.`);
-                    const placeholders = [];
+                    const placeholders: PlanMeal[] = [];
                     for (let k = 0; k < count; k++) {
                         placeholders.push({
                             id: `placeholder-${categoryLabel}-${Date.now()}-${k}`,
                             name: `Gericht hinzufügen (${categoryLabel})`,
                             categories: [],
-                            isFavorite: false
-                        });
+                            isFavorite: false,
+                            userId: user?.uid || '',
+                            ownerEmail: user?.email || '',
+                            isShared: false,
+                            description: ''
+                        } as Meal);
                     }
                     return placeholders;
                 }
@@ -131,7 +138,7 @@ export const useMealPlan = () => {
                     let score = 10;
                     if (meal.isFavorite) score += 150;
                     if (meal.lastEaten) {
-                        const daysAgo = (new Date() - new Date(meal.lastEaten)) / (1000 * 60 * 60 * 24);
+                        const daysAgo = (new Date().getTime() - new Date(meal.lastEaten as string).getTime()) / (1000 * 60 * 60 * 24);
                         if (daysAgo < 2) score *= 0.1;
                         else if (daysAgo < 5) score *= 0.5;
                         else if (daysAgo > 14) score += 20;
@@ -170,8 +177,12 @@ export const useMealPlan = () => {
                 name: 'Brotzeit',
                 categories: ['brotzeit'],
                 isFavorite: false,
-                lastEaten: null
-            });
+                lastEaten: undefined,
+                userId: user?.uid || '',
+                ownerEmail: user?.email || '',
+                isShared: false,
+                description: ''
+            } as Meal);
         }
 
         // Shuffle
@@ -187,7 +198,7 @@ export const useMealPlan = () => {
 
         // Check for duplicates in the generated plan
         // We count how many times each meal ID appears
-        const idCounts = {};
+        const idCounts: Record<string, number> = {};
         let hasDuplicates = false;
         finalPlan.forEach(m => {
             idCounts[m.id] = (idCounts[m.id] || 0) + 1;
@@ -198,7 +209,7 @@ export const useMealPlan = () => {
 
     }, [meals, config, plan, startDate, user, refreshMeals]);
 
-    const swapMeal = async (index, desiredCategory) => {
+    const swapMeal = async (index: number, desiredCategory?: string) => {
         const currentMeal = plan[index];
         // For swapping, we need to know which category slot this day is intended for.
         // Heuristic: currentMeal might have multiple categories.
@@ -220,24 +231,24 @@ export const useMealPlan = () => {
         // Or if user clicks swap on Brotzeit, maybe they want a real meal instead.
         // Let's assume if category is 'brotzeit', we swap to ANY random meal from the collection
         // to give inspiration.
-        let candidates = [];
+        let candidates: Meal[] = [];
         if (targetCategory === 'brotzeit') {
             candidates = meals.filter(m => m.id !== currentMeal.id);
         } else {
-            candidates = meals.filter(m => m.categories && m.categories.includes(targetCategory) && m.id !== currentMeal.id);
+            candidates = meals.filter(m => m.categories && m.categories.includes(targetCategory as string) && m.id !== currentMeal.id);
         }
 
         if (candidates.length > 0) {
             const randomNew = candidates[Math.floor(Math.random() * candidates.length)];
             const updatedPlan = [...plan];
             updatedPlan[index] = randomNew;
-            await saveCurrentPlan(updatedPlan, startDate); // Persist swap
+            await saveCurrentPlan(updatedPlan, startDate || new Date().toISOString()); // Persist swap
         } else {
             alert("No other meals available in this category!");
         }
     };
 
-    const updateConfig = (key, value) => {
+    const updateConfig = (key: string, value: number) => {
         setConfig(prev => ({ ...prev, [key]: value }));
     }
 
@@ -247,7 +258,7 @@ export const useMealPlan = () => {
         if (user) await savePlanService(user.uid, { days: [], startDate: null });
     };
 
-    const toggleMealEaten = async (index) => {
+    const toggleMealEaten = async (index: number) => {
         if (!plan[index]) return;
 
         const updatedPlan = [...plan];
@@ -264,7 +275,7 @@ export const useMealPlan = () => {
             try {
                 await savePlanService(user.uid, {
                     days: updatedPlan,
-                    startDate
+                    startDate: startDate || new Date().toISOString()
                 });
             } catch (e) {
                 console.error("Failed to save plan after toggle", e);

@@ -1,14 +1,15 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithCredential, GoogleAuthProvider } from 'firebase/auth';
+import { onAuthStateChanged, signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, signInWithCredential, GoogleAuthProvider, User as FirebaseUser } from 'firebase/auth';
 import { auth } from '../config/firebaseConfig';
 import { useRouter, useSegments } from 'expo-router';
+import { AuthContextType } from '../types';
 
-const AuthContext = createContext({});
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+    const [user, setUser] = useState<FirebaseUser | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const segments = useSegments();
@@ -45,9 +46,9 @@ export const AuthProvider = ({ children }) => {
         }
     }
 
-    const loginWithEmail = (email, password) => signInWithEmailAndPassword(auth, email, password);
-    const registerWithEmail = (email, password) => createUserWithEmailAndPassword(auth, email, password);
-    const loginWithCredential = (credential) => signInWithCredential(auth, credential);
+    const loginWithEmail = (email: string, password: string) => signInWithEmailAndPassword(auth, email, password);
+    const registerWithEmail = (email: string, password: string) => createUserWithEmailAndPassword(auth, email, password);
+    const loginWithCredential = (credential: any) => signInWithCredential(auth, credential);
     const logout = () => signOut(auth);
 
     return (

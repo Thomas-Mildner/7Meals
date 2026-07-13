@@ -20,6 +20,8 @@ Notifications.setNotificationHandler({
         shouldShowAlert: true,
         shouldPlaySound: false,
         shouldSetBadge: false,
+        shouldShowBanner: false,
+        shouldShowList: false,
     }),
 });
 
@@ -48,7 +50,7 @@ function AppLayout() {
             navigator.serviceWorker.register('/sw.js')
                 .then(registration => {
                     console.log('Service Worker registered with scope:', registration.scope);
-                    return getToken(messaging, {
+                    return getToken(messaging as any, {
                         vapidKey: VAPID_KEY,
                         serviceWorkerRegistration: registration,
                     });

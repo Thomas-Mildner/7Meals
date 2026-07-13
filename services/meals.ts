@@ -1,5 +1,6 @@
 import { collection, addDoc, getDocs, deleteDoc, updateDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
+import { Meal } from '../types';
 
 const MEALS_COLLECTION = 'meals';
 
@@ -7,7 +8,7 @@ const MEALS_COLLECTION = 'meals';
 // Old: { name: '...', category: 'meat' }
 // New: { name: '...', categories: ['meat', 'veg'] }
 
-export const addMeal = async (name, categories, userId, ownerEmail = '', isShared = false, description = '') => {
+export const addMeal = async (name: string, categories: string[], userId: string, ownerEmail = '', isShared = false, description = ''): Promise<Meal> => {
     try {
         const docRef = await addDoc(collection(db, MEALS_COLLECTION), {
             name,
@@ -26,11 +27,11 @@ export const addMeal = async (name, categories, userId, ownerEmail = '', isShare
     }
 };
 
-export const getMeals = async (userId) => {
+export const getMeals = async (userId: string): Promise<Meal[]> => {
     try {
         const q = query(collection(db, MEALS_COLLECTION), where("userId", "==", userId));
         const querySnapshot = await getDocs(q);
-        const meals = [];
+        const meals: Meal[] = [];
         querySnapshot.forEach((doc) => {
             const data = doc.data();
             // Data Normalization (Backwards Compatibility)
@@ -38,7 +39,7 @@ export const getMeals = async (userId) => {
             if (categories.length === 0 && data.category) {
                 categories = [data.category];
             }
-            meals.push({ id: doc.id, ...data, categories });
+            meals.push({ id: doc.id, ...data, categories } as Meal);
         });
         return meals;
     } catch (error) {
@@ -47,7 +48,7 @@ export const getMeals = async (userId) => {
     }
 };
 
-export const deleteMeal = async (id) => {
+export const deleteMeal = async (id: string): Promise<void> => {
     try {
         await deleteDoc(doc(db, MEALS_COLLECTION, id));
     } catch (error) {
@@ -56,7 +57,7 @@ export const deleteMeal = async (id) => {
     }
 }
 
-export const toggleMealFavorite = async (id, isFavorite) => {
+export const toggleMealFavorite = async (id: string, isFavorite: boolean): Promise<void> => {
     try {
         const mealRef = doc(db, MEALS_COLLECTION, id);
         await updateDoc(mealRef, {
@@ -68,7 +69,7 @@ export const toggleMealFavorite = async (id, isFavorite) => {
     }
 };
 
-export const updateLastEatenDate = async (id, date) => {
+export const updateLastEatenDate = async (id: string, date: string): Promise<void> => {
     try {
         const mealRef = doc(db, MEALS_COLLECTION, id);
         await updateDoc(mealRef, {
@@ -80,10 +81,10 @@ export const updateLastEatenDate = async (id, date) => {
     }
 };
 
-export const updateMeal = async (id, { name, categories, description, isShared }) => {
+export const updateMeal = async (id: string, { name, categories, description, isShared }: Partial<Meal>): Promise<void> => {
     try {
         const mealRef = doc(db, MEALS_COLLECTION, id);
-        const updates = {};
+        const updates: any = {};
         if (name !== undefined) updates.name = name;
         if (categories !== undefined) updates.categories = categories;
         if (description !== undefined) updates.description = description;
@@ -96,10 +97,10 @@ export const updateMeal = async (id, { name, categories, description, isShared }
     }
 };
 
-export const toggleMealShared = async (id, isShared, ownerEmail = '') => {
+export const toggleMealShared = async (id: string, isShared: boolean, ownerEmail = ''): Promise<void> => {
     try {
         const mealRef = doc(db, MEALS_COLLECTION, id);
-        const updates = { isShared };
+        const updates: any = { isShared };
         if (ownerEmail) {
             updates.ownerEmail = ownerEmail.toLowerCase();
         }
@@ -110,7 +111,7 @@ export const toggleMealShared = async (id, isShared, ownerEmail = '') => {
     }
 };
 
-export const getSharedMealsByEmail = async (email) => {
+export const getSharedMealsByEmail = async (email: string): Promise<Meal[]> => {
     try {
         // Query only by ownerEmail to avoid Firestore composite index requirement
         // Filter isShared client-side
@@ -119,7 +120,7 @@ export const getSharedMealsByEmail = async (email) => {
             where("ownerEmail", "==", email.toLowerCase())
         );
         const querySnapshot = await getDocs(q);
-        const meals = [];
+        const meals: Meal[] = [];
         querySnapshot.forEach((docSnap) => {
             const data = docSnap.data();
             // Only include shared meals
@@ -128,7 +129,7 @@ export const getSharedMealsByEmail = async (email) => {
             if (categories.length === 0 && data.category) {
                 categories = [data.category];
             }
-            meals.push({ id: docSnap.id, ...data, categories });
+            meals.push({ id: docSnap.id, ...data, categories } as Meal);
         });
         return meals;
     } catch (error) {
@@ -137,7 +138,7 @@ export const getSharedMealsByEmail = async (email) => {
     }
 };
 
-export const importMeal = async (meal, userId, ownerEmail) => {
+export const importMeal = async (meal: Partial<Meal>, userId: string, ownerEmail: string): Promise<Meal> => {
     try {
         const docRef = await addDoc(collection(db, MEALS_COLLECTION), {
             name: meal.name,
@@ -149,7 +150,7 @@ export const importMeal = async (meal, userId, ownerEmail) => {
             isFavorite: false,
             createdAt: new Date().toISOString(),
         });
-        return { id: docRef.id, name: meal.name, categories: meal.categories || [], description: meal.description || '', userId, ownerEmail: ownerEmail.toLowerCase(), isShared: false, isFavorite: false };
+        return { id: docRef.id, name: meal.name || '', categories: meal.categories || [], description: meal.description || '', userId, ownerEmail: ownerEmail.toLowerCase(), isShared: false, isFavorite: false };
     } catch (error) {
         console.error("Error importing meal: ", error);
         throw error;

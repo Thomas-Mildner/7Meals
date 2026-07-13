@@ -20,7 +20,7 @@ const DAYS = [
     { label: 'Samstag', value: 7 },
 ];
 
-export default function ProfileModal({ visible, onClose }) {
+export default function ProfileModal({ visible, onClose }: any) {
     const { user, logout } = useAuth();
     const { theme, toggleTheme, colors } = useTheme();
     const [pushEnabled, setPushEnabled] = useState(false);
@@ -53,9 +53,9 @@ export default function ProfileModal({ visible, onClose }) {
         checkStatus();
     }, [visible]);
 
-    const getDayLabel = (val) => DAYS.find(d => d.value === val)?.label;
+    const getDayLabel = (val: number) => DAYS.find(d => d.value === val)?.label;
 
-    const handleSchedule = async (enabled, day, time) => {
+    const handleSchedule = async (enabled: boolean, day: number, time: Date) => {
         try {
             if (enabled) {
                 const token = await registerForPushNotificationsAsync();
@@ -76,7 +76,7 @@ export default function ProfileModal({ visible, onClose }) {
             }
         } catch (error) {
             console.error(error);
-            Alert.alert("Fehler", "Ein unerwarteter Fehler ist aufgetreten: " + error.message);
+            Alert.alert("Fehler", "Ein unerwarteter Fehler ist aufgetreten: " + (error as any).message);
             setPushEnabled(false);
             await AsyncStorage.setItem('weeklyReminderEnabled', 'false');
         }
@@ -110,7 +110,7 @@ export default function ProfileModal({ visible, onClose }) {
         }
     };
 
-    const onTimeChange = (event, selectedDate) => {
+    const onTimeChange = (event: any, selectedDate: Date | undefined) => {
         const currentDate = selectedDate || reminderTime;
         setShowTimePicker(Platform.OS === 'ios'); // Keep open on iOS (inline), close on Android
         setReminderTime(currentDate);
@@ -136,7 +136,7 @@ export default function ProfileModal({ visible, onClose }) {
         }
     };
 
-    const handleDaySelect = (val) => {
+    const handleDaySelect = (val: number) => {
         setSelectedDay(val);
         setShowDayPicker(false);
     };
@@ -222,7 +222,7 @@ export default function ProfileModal({ visible, onClose }) {
                                             <Ionicons name="time-outline" size={24} color={colors.text} />
                                         </View>
                                         <Text style={[styles.menuItemText, { flex: 1 }]}>Erinnerungszeit</Text>
-                                        {Platform.OS === 'web' ? (
+                                        {(Platform.OS as any) === 'web' ? (
                                             <DateTimePicker
                                                 testID="dateTimePicker"
                                                 value={reminderTime}
@@ -343,7 +343,7 @@ export default function ProfileModal({ visible, onClose }) {
                     title="Erfolg"
                     message={`Wöchentliche Erinnerung aktiviert!\nDu wirst jeden ${getDayLabel(selectedDay)} um ${reminderTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} benachrichtigt.`}
                     confirmText="OK"
-                    cancelText={null}
+                    cancelText={undefined}
                     type="default"
                 />
             </View>
@@ -351,7 +351,7 @@ export default function ProfileModal({ visible, onClose }) {
     );
 }
 
-const getStyles = (colors) => StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,

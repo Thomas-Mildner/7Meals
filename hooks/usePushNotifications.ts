@@ -39,7 +39,7 @@ export const usePushNotifications = () => {
                 token = (await Notifications.getExpoPushTokenAsync({
                     projectId,
                     vapidKey: 'jp18ON7nruwMiUbuGke2oeaAqIYILAis3nj09MiHGYM'
-                })).data;
+                } as any)).data;
             } catch (e) {
                 console.log("Error fetching push token:", e);
                 // Even if token fails, we return a dummy string so local notifications might still work
@@ -63,7 +63,7 @@ export const usePushNotifications = () => {
         // Cancel all existing to avoid duplicates
         await Notifications.cancelAllScheduledNotificationsAsync();
 
-        const trigger = {
+        const trigger: any = {
             type: 'weekly',
             weekday: Number(weekday),
             hour: Number(hour),

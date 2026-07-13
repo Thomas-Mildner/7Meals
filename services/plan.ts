@@ -3,7 +3,7 @@ import { db } from '../config/firebaseConfig';
 
 const PLANS_COLLECTION = 'plans';
 
-export const savePlan = async (userId, planData) => {
+export const savePlan = async (userId: string, planData: any): Promise<void> => {
     try {
         const planRef = doc(db, PLANS_COLLECTION, userId);
         await setDoc(planRef, {
@@ -16,7 +16,7 @@ export const savePlan = async (userId, planData) => {
     }
 };
 
-export const getPlan = async (userId) => {
+export const getPlan = async (userId: string): Promise<any> => {
     try {
         const planRef = doc(db, PLANS_COLLECTION, userId);
         const docSnap = await getDoc(planRef);

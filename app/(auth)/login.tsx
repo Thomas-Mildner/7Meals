@@ -36,7 +36,7 @@ export default function LoginScreen() {
             const credential = GoogleAuthProvider.credential(id_token);
             setIsLoading(true);
             loginWithCredential(credential)
-                .catch((error) => {
+                .catch((error: any) => {
                     Alert.alert("Google Login fehlgeschlagen", error.message);
                 })
                 .finally(() => setIsLoading(false));
@@ -51,7 +51,7 @@ export default function LoginScreen() {
             } else {
                 await promptAsync();
             }
-        } catch (error) {
+        } catch (error: any) {
             Alert.alert("Google Login Fehler", error.message);
         } finally {
             if (Platform.OS === 'web') setIsLoading(false);
@@ -70,7 +70,7 @@ export default function LoginScreen() {
             } else {
                 await registerWithEmail(email, password);
             }
-        } catch (error) {
+        } catch (error: any) {
             Alert.alert("Authentifizierung fehlgeschlagen", error.message);
         } finally {
             setIsLoading(false);
@@ -184,7 +184,7 @@ export default function LoginScreen() {
     );
 }
 
-const getStyles = (colors, theme) => StyleSheet.create({
+const getStyles = (colors: any, theme: string) => StyleSheet.create({
     container: {
         flex: 1,
     },

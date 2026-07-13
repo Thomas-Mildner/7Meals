@@ -1,16 +1,17 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getMeals, addMeal as addMealService, deleteMeal as deleteMealService, toggleMealFavorite, updateLastEatenDate, toggleMealShared, getSharedMealsByEmail, importMeal as importMealService, updateMeal as updateMealService } from '../services/meals';
 import { useAuth } from './AuthContext';
+import { MealContextType, Meal } from '../types';
 
-const MealContext = createContext({});
+const MealContext = createContext<MealContextType>({} as MealContextType);
 
 export const useMealContext = () => useContext(MealContext);
 
-export const MealProvider = ({ children }) => {
+export const MealProvider = ({ children }: { children: React.ReactNode }) => {
     const { user } = useAuth();
-    const [meals, setMeals] = useState([]);
+    const [meals, setMeals] = useState<Meal[]>([]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState<any>(null);
 
     const fetchMeals = useCallback(async () => {
         if (!user) {
@@ -32,7 +33,7 @@ export const MealProvider = ({ children }) => {
         fetchMeals();
     }, [fetchMeals]);
 
-    const addMeal = async (name, categories, isShared = false, description = '') => {
+    const addMeal = async (name: string, categories: string[], description = '', isShared = false) => {
         if (!user) return;
 
         // Check for duplicates (case-insensitive)
@@ -57,7 +58,7 @@ export const MealProvider = ({ children }) => {
         }
     };
 
-    const removeMeal = async (id) => {
+    const removeMeal = async (id: string) => {
         setLoading(true);
         try {
             await deleteMealService(id);
@@ -70,7 +71,7 @@ export const MealProvider = ({ children }) => {
         }
     }
 
-    const toggleFavorite = async (id, isFavorite) => {
+    const toggleFavorite = async (id: string, isFavorite: boolean) => {
         // Optimistic update
         setMeals(prev => prev.map(m => m.id === id ? { ...m, isFavorite } : m));
         try {
@@ -82,7 +83,7 @@ export const MealProvider = ({ children }) => {
         }
     };
 
-    const markAsEaten = async (id) => {
+    const markAsEaten = async (id: string) => {
         const today = new Date().toISOString();
         // Optimistic update
         setMeals(prev => prev.map(m => m.id === id ? { ...m, lastEaten: today } : m));
@@ -96,7 +97,7 @@ export const MealProvider = ({ children }) => {
         }
     };
 
-    const toggleShared = async (id, isShared) => {
+    const toggleShared = async (id: string, isShared: boolean) => {
         // Optimistic update
         setMeals(prev => prev.map(m => m.id === id ? { ...m, isShared } : m));
         try {
@@ -108,7 +109,7 @@ export const MealProvider = ({ children }) => {
         }
     };
 
-    const editMeal = async (id, updates) => {
+    const editMeal = async (id: string, updates: Partial<Meal>) => {
         if (!user) return;
 
         // If name changed, check for duplicates
@@ -131,7 +132,7 @@ export const MealProvider = ({ children }) => {
         }
     };
 
-    const searchFriendMeals = async (email) => {
+    const searchFriendMeals = async (email: string) => {
         try {
             return await getSharedMealsByEmail(email);
         } catch (err) {
@@ -140,11 +141,11 @@ export const MealProvider = ({ children }) => {
         }
     };
 
-    const importFriendMeal = async (meal) => {
+    const importFriendMeal = async (meal: Partial<Meal>) => {
         if (!user) return;
 
         // Check for duplicates
-        const normalizedName = meal.name.trim().toLowerCase();
+        const normalizedName = (meal.name || '').trim().toLowerCase();
         const exists = meals.some(m => m.name.trim().toLowerCase() === normalizedName);
         if (exists) {
             throw new Error("DUPLICATE_MEAL");

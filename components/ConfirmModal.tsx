@@ -3,6 +3,17 @@ import { Modal, View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform }
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
+interface ConfirmModalProps {
+    visible: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
+    title: string;
+    message: string;
+    confirmText?: string;
+    cancelText?: string;
+    type?: "default" | "destructive";
+}
+
 export default function ConfirmModal({
     visible,
     onClose,
@@ -12,7 +23,7 @@ export default function ConfirmModal({
     confirmText = "Bestätigen",
     cancelText = "Abbrechen",
     type = "default" // 'default' | 'destructive'
-}) {
+}: ConfirmModalProps) {
     const { colors, theme } = useTheme();
     const styles = getStyles(colors, theme);
 
@@ -69,7 +80,7 @@ export default function ConfirmModal({
     );
 }
 
-const getStyles = (colors, theme) => StyleSheet.create({
+const getStyles = (colors: any, theme: string) => StyleSheet.create({
     centeredView: {
         flex: 1,
         justifyContent: "center",

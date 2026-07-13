@@ -60,7 +60,7 @@ export default function PlanScreen() {
         setShowClearConfirm(true);
     }
 
-    const renderConfigCounter = (label, type) => (
+    const renderConfigCounter = (label: string, type: 'meat' | 'fish' | 'veg' | 'brotzeit') => (
         <View style={styles.counterContainer}>
             <Text style={[styles.counterLabel, { color: colors[type] }]}>{label}</Text>
             <View style={styles.counterControls}>
@@ -81,7 +81,7 @@ export default function PlanScreen() {
         </View>
     );
 
-    const getCategoryLabel = (cat) => {
+    const getCategoryLabel = (cat: string) => {
         switch (cat) {
             case 'meat': return 'FLEISCH';
             case 'fish': return 'FISCH';
@@ -91,7 +91,7 @@ export default function PlanScreen() {
         }
     };
 
-    const renderDayItem = ({ item, index }) => {
+    const renderDayItem = ({ item, index }: { item: any, index: number }) => {
         // Use the eaten state directly from the plan slot
         const isEaten = !!item.isEaten;
 
@@ -148,7 +148,7 @@ export default function PlanScreen() {
                     </View>
                     <View style={{ flexDirection: 'row', gap: 4 }}>
                         <View style={{ flexDirection: 'row', gap: 4 }}>
-                            {item.categories && Array.isArray(item.categories) && item.categories.map(cat => (
+                            {item.categories && Array.isArray(item.categories) && item.categories.map((cat: string) => (
                                 <View key={cat} style={[styles.categoryBadge, { backgroundColor: colors[cat] + '20' }]}>
                                     <Text style={[styles.categoryText, { color: colors[cat] }]}>
                                         {getCategoryLabel(cat)}
@@ -173,7 +173,7 @@ export default function PlanScreen() {
                         </TouchableOpacity>
                     )}
                     <TouchableOpacity
-                        style={[styles.iconButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' }]}
+                        style={[{ backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' } as any]}
                         onPress={() => setProfileModalVisible(true)}
                     >
                         <Ionicons name="person-outline" size={20} color={colors.text} />
@@ -259,7 +259,7 @@ export default function PlanScreen() {
     );
 }
 
-const getStyles = (colors, theme) => StyleSheet.create({
+const getStyles = (colors: any, theme: string) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,

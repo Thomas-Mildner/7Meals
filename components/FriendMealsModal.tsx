@@ -3,12 +3,13 @@ import { View, Text, TextInput, Modal, StyleSheet, TouchableOpacity, KeyboardAvo
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useMealContext } from '../context/MealContext';
+import { Meal } from '@/types';
 
-export default function FriendMealsModal({ visible, onClose }) {
+export default function FriendMealsModal({ visible, onClose }: any) {
     const { colors, theme } = useTheme();
     const { searchFriendMeals, importFriendMeal, meals: myMeals } = useMealContext();
     const [email, setEmail] = useState('');
-    const [friendMeals, setFriendMeals] = useState([]);
+    const [friendMeals, setFriendMeals] = useState<Meal[]>([]);
     const [searching, setSearching] = useState(false);
     const [searched, setSearched] = useState(false);
     const [importingId, setImportingId] = useState(null);
@@ -27,8 +28,7 @@ export default function FriendMealsModal({ visible, onClose }) {
             const results = await searchFriendMeals(trimmed);
             setFriendMeals(results);
             setSearched(true);
-        } catch (err) {
-            console.error('Search error:', err);
+        } catch (err: any) {
             Alert.alert('Fehler', err?.message || 'Fehler beim Suchen der Gerichte.');
             setSearched(true);
         } finally {
@@ -36,8 +36,7 @@ export default function FriendMealsModal({ visible, onClose }) {
         }
     };
 
-    const handleImport = async (meal) => {
-        // Check if already exists locally
+    const handleImport = async (meal: any) => {
         const normalizedName = meal.name.trim().toLowerCase();
         const exists = myMeals.some(m => m.name.trim().toLowerCase() === normalizedName);
         if (exists) {
@@ -49,7 +48,7 @@ export default function FriendMealsModal({ visible, onClose }) {
         try {
             await importFriendMeal(meal);
             Alert.alert('Importiert!', `"${meal.name}" wurde zu deiner Sammlung hinzugefügt.`);
-        } catch (err) {
+        } catch (err: any) {
             if (err.message === 'DUPLICATE_MEAL') {
                 Alert.alert('Bereits vorhanden', `"${meal.name}" ist bereits in deiner Sammlung.`);
             } else {
@@ -67,7 +66,7 @@ export default function FriendMealsModal({ visible, onClose }) {
         onClose();
     };
 
-    const getCategoryLabel = (cat) => {
+    const getCategoryLabel = (cat: string) => {
         switch (cat) {
             case 'meat': return 'FLEISCH';
             case 'fish': return 'FISCH';
@@ -76,21 +75,21 @@ export default function FriendMealsModal({ visible, onClose }) {
         }
     };
 
-    const isAlreadyImported = (meal) => {
+    const isAlreadyImported = (meal: any) => {
         const normalizedName = meal.name.trim().toLowerCase();
         return myMeals.some(m => m.name.trim().toLowerCase() === normalizedName);
     };
 
-    const renderMealItem = ({ item }) => {
+    const renderMealItem = ({ item }: { item: any }) => {
         const alreadyHave = isAlreadyImported(item);
         return (
             <View style={styles.mealCard}>
                 <View style={styles.mealInfo}>
                     <Text style={styles.mealName}>{item.name}</Text>
                     <View style={styles.categoriesRow}>
-                        {item.categories && item.categories.map(cat => (
-                            <View key={cat} style={[styles.categoryBadge, { backgroundColor: (colors[cat] || colors.primary) + '20' }]}>
-                                <Text style={[styles.categoryText, { color: colors[cat] || colors.primary }]}>
+                        {item.categories && item.categories.map((cat: string) => (
+                            <View key={cat} style={[styles.categoryBadge, { backgroundColor: (colors[cat as keyof typeof colors] || colors.primary) + '20' }]}>
+                                <Text style={[styles.categoryText, { color: colors[cat as keyof typeof colors] || colors.primary }]}>
                                     {getCategoryLabel(cat)}
                                 </Text>
                             </View>
@@ -186,7 +185,7 @@ export default function FriendMealsModal({ visible, onClose }) {
     );
 }
 
-const getStyles = (colors, theme) => StyleSheet.create({
+const getStyles = (colors: any, theme: string) => StyleSheet.create({
     centeredView: {
         flex: 1,
         justifyContent: 'center',

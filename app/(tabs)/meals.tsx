@@ -24,7 +24,7 @@ export default function MealsScreen() {
     // Dynamic Styles
     const styles = getStyles(colors, theme);
 
-    const getCategoryLabel = (cat) => {
+    const getCategoryLabel = (cat: string) => {
         switch (cat) {
             case 'meat': return 'FLEISCH';
             case 'fish': return 'FISCH';
@@ -33,7 +33,7 @@ export default function MealsScreen() {
         }
     };
 
-    const renderItem = ({ item }) => (
+    const renderItem = ({ item }: any) => (
         <LinearGradient
             colors={[colors.card, theme === 'dark' ? '#2a2a2a' : '#e6e6e6']}
             start={{ x: 0, y: 0 }}
@@ -79,7 +79,7 @@ export default function MealsScreen() {
                 )}
 
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {item.categories && Array.isArray(item.categories) && item.categories.map(cat => (
+                    {item.categories && Array.isArray(item.categories) && item.categories.map((cat: string) => (
                         <View key={cat} style={[styles.categoryBadge, { backgroundColor: colors[cat] + '20' }]}>
                             <Text style={[styles.categoryText, { color: colors[cat] }]}>
                                 {getCategoryLabel(cat)}
@@ -104,7 +104,7 @@ export default function MealsScreen() {
     // Usually SectionList only renders headers for data.
     const notEmptySections = sections.filter(s => s.data.length > 0);
 
-    const renderSectionHeader = ({ section: { title, color } }) => (
+    const renderSectionHeader = ({ section: { title, color } }: { section: { title: string, color: string } }) => (
         <View style={styles.sectionHeader}>
             <View style={[styles.sectionIndicator, { backgroundColor: color }]} />
             <Text style={[styles.sectionTitle, { color: color }]}>{title}</Text>
@@ -202,7 +202,7 @@ export default function MealsScreen() {
     );
 }
 
-const getStyles = (colors, theme) => StyleSheet.create({
+const getStyles = (colors: any, theme: string) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: colors.background,

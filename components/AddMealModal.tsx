@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { View, Text, TextInput, Modal, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Switch } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
-export default function AddMealModal({ visible, onClose, onAdd }) {
+export default function AddMealModal({ visible, onClose, onAdd }: any) {
     const { colors, theme } = useTheme();
     const [name, setName] = useState('');
-    const [categories, setCategories] = useState([]);
+    const [categories, setCategories] = useState<string[]>([]);
     const [isShared, setIsShared] = useState(false);
     const [description, setDescription] = useState('');
 
@@ -21,7 +21,7 @@ export default function AddMealModal({ visible, onClose, onAdd }) {
                 setIsShared(false);
                 setDescription('');
                 onClose();
-            } catch (e) {
+            } catch (e: any) {
                 if (e.message === 'DUPLICATE_MEAL') {
                     alert("Dieses Gericht existiert bereits!");
                 } else {
@@ -31,7 +31,7 @@ export default function AddMealModal({ visible, onClose, onAdd }) {
         }
     };
 
-    const toggleCategory = (cat) => {
+    const toggleCategory = (cat: string) => {
         setCategories(prev => {
             if (prev.includes(cat)) {
                 return prev.filter(c => c !== cat);
@@ -41,7 +41,7 @@ export default function AddMealModal({ visible, onClose, onAdd }) {
         });
     };
 
-    const getCategoryLabel = (cat) => {
+    const getCategoryLabel = (cat: string) => {
         switch (cat) {
             case 'meat': return 'FLEISCH';
             case 'fish': return 'FISCH';
@@ -68,7 +68,7 @@ export default function AddMealModal({ visible, onClose, onAdd }) {
                         style={[styles.input, styles.descriptionInput]}
                         placeholder="Beschreibung (optional)"
                         placeholderTextColor={theme === 'dark' ? "#999" : "#666"}
-                        value={description}
+                        value={description as string}
                         onChangeText={setDescription}
                         multiline
                         numberOfLines={2}
@@ -126,7 +126,7 @@ export default function AddMealModal({ visible, onClose, onAdd }) {
     );
 }
 
-const getStyles = (colors, theme) => StyleSheet.create({
+const getStyles = (colors: any, theme: string) => StyleSheet.create({
     centeredView: {
         flex: 1,
         justifyContent: 'center',

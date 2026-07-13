@@ -17,7 +17,7 @@ const DEMO_MEALS = [
     { name: 'Gebackener Camembert', category: 'veg' },
 ];
 
-export const seedDatabase = async (userId) => {
+export const seedDatabase = async (userId: string) => {
     try {
         const promises = DEMO_MEALS.map(meal => addMeal(meal.name, [meal.category], userId));
         await Promise.all(promises);

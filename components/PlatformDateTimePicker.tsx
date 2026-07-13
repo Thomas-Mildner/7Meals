@@ -7,14 +7,14 @@ import { Colors } from '../constants/Colors';
 
 registerLocale('de', de);
 
-export default function PlatformDateTimePicker(props) {
+export default function PlatformDateTimePicker(props: any) {
     if (Platform.OS === 'web') {
         const { value, onChange, style } = props;
 
         // Custom Input Component for React DatePicker
-        const CustomInput = forwardRef(({ value, onClick }, ref) => (
+        const CustomInput = forwardRef(({ value, onClick }: any, ref: any) => (
             <Text
-                onClick={onClick}
+                onPress={onClick}
                 ref={ref}
                 style={{
                     color: Colors.text || '#fff',
@@ -41,7 +41,7 @@ export default function PlatformDateTimePicker(props) {
             }, style]}>
                 <DatePicker
                     selected={value || new Date()}
-                    onChange={(date) => {
+                    onChange={(date: any) => {
                         if (onChange) onChange({ type: 'set' }, date);
                     }}
                     showTimeSelect
