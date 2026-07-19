@@ -1,0 +1,33 @@
+version: 2
+updates:
+  # Aktualisiert GitHub Actions in .github/workflows/
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    open-pull-requests-limit: 5
+
+  # Aktualisiert Node.js Abhängigkeiten (pnpm)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore"
+    labels:
+      - "dependencies"
+    # Reduziert das Risiko, dass du von PRs überflutet wirst (und unaufmerksam prüfst)
+    open-pull-requests-limit: 10
+    # Gruppiert Patch- und Minor-Updates, um den Review-Prozess zu vereinfachen
+    groups:
+      minor-and-patch-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
