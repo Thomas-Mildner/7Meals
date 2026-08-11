@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { uploadMealImage, deleteMealImage } from '../../services/storage';
 import { ActivityIndicator } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import ImageSourceModal from '../../components/ImageSourceModal';
 
 const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
@@ -21,6 +22,8 @@ export default function PlanScreen() {
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [isConfigExpanded, setIsConfigExpanded] = useState(true);
     const [uploadingMealId, setUploadingMealId] = useState<string | null>(null);
+    const [imageModalVisible, setImageModalVisible] = useState(false);
+    const [imageTarget, setImageTarget] = useState<{meal: any, index: number} | null>(null);
 
     useEffect(() => {
         // Automatically collapse configuration if a plan exists
@@ -94,33 +97,73 @@ export default function PlanScreen() {
         }
     };
 
-    const handleTakeImage = async (meal: any, index: number) => {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert('Berechtigung fehlt', 'Wir benötigen Kamerazugriff, um Bilder aufzunehmen.');
-            return;
+    const handleTakeImage = (meal: any, index: number) => {
+        const isDesktopWeb = Platform.OS === 'web' && typeof navigator !== 'undefined' && !/Mobi|Android|iPhone/i.test(navigator.userAgent);
+        
+        if (isDesktopWeb) {
+            executeImageSelection('gallery', meal, index);
+        } else {
+            setImageTarget({ meal, index });
+            setImageModalVisible(true);
         }
+    };
 
-        const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 0.5,
-        });
+    const handleImageSourceSelected = (source: 'camera' | 'gallery') => {
+        if (imageTarget) {
+            executeImageSelection(source, imageTarget.meal, imageTarget.index);
+        }
+    };
 
-        if (!result.canceled && result.assets && result.assets.length > 0) {
-            setUploadingMealId(meal.id);
-            try {
-                const imageUrl = await uploadMealImage(meal.id, result.assets[0].uri);
-                await editMeal(meal.id, { imageUrl });
-                await updatePlanMeal(index, { imageUrl });
-                Alert.alert('Erfolg', 'Bild wurde hochgeladen!');
-            } catch (e: any) {
-                console.error(e);
-                Alert.alert('Fehler', 'Das Bild konnte nicht hochgeladen werden. Stelle sicher, dass du in Firebase angemeldet bist und die Berechtigungen (Storage Rules) stimmen.');
-            } finally {
-                setUploadingMealId(null);
+    const executeImageSelection = async (source: 'camera' | 'gallery', targetMeal: any, index: number) => {
+        setImageModalVisible(false);
+
+        try {
+            let result;
+            
+            if (source === 'camera') {
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert('Berechtigung fehlt', 'Wir benötigen Kamerazugriff, um Bilder aufzunehmen.');
+                    return;
+                }
+                result = await ImagePicker.launchCameraAsync({
+                    mediaTypes: ['images'],
+                    allowsEditing: true,
+                    aspect: [4, 3],
+                    quality: 0.5,
+                });
+            } else {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert('Berechtigung fehlt', 'Wir benötigen Zugriff auf deine Galerie.');
+                    return;
+                }
+                result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ['images'],
+                    allowsEditing: true,
+                    aspect: [4, 3],
+                    quality: 0.5,
+                });
             }
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                setUploadingMealId(targetMeal.id);
+                try {
+                    const imageUrl = await uploadMealImage(targetMeal.id, result.assets[0].uri);
+                    await editMeal(targetMeal.id, { imageUrl });
+                    await updatePlanMeal(index, { imageUrl });
+                    Alert.alert('Erfolg', 'Bild wurde hochgeladen!');
+                } catch (e: any) {
+                    console.error(e);
+                    Alert.alert('Fehler', 'Das Bild konnte nicht hochgeladen werden.');
+                } finally {
+                    setUploadingMealId(null);
+                }
+            }
+        } catch (e) {
+            console.error("Error launching image picker", e);
+        } finally {
+            setImageTarget(null);
         }
     };
 
@@ -376,11 +419,22 @@ export default function PlanScreen() {
             <ConfirmModal
                 visible={showClearConfirm}
                 onClose={() => setShowClearConfirm(false)}
-                onConfirm={clearPlan}
-                title="Plan löschen"
-                message="Möchtest du den aktuellen Plan wirklich löschen?"
-                confirmText="Löschen"
-                type="destructive"
+                onConfirm={async () => {
+                    await clearPlan();
+                    setShowClearConfirm(false);
+                }}
+                title="Wochenplan löschen"
+                message="Möchtest du den gesamten Wochenplan wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+                confirmText="Ja, löschen"
+                cancelText="Abbrechen"
+            />
+            <ImageSourceModal
+                visible={imageModalVisible}
+                onClose={() => {
+                    setImageModalVisible(false);
+                    setImageTarget(null);
+                }}
+                onSelectSource={handleImageSourceSelected}
             />
         </View >
     );
