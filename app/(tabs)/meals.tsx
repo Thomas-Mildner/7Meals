@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert, Image, Platform, TextInput } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useMeals } from '../../hooks/useMeals';
@@ -23,6 +23,7 @@ export default function MealsScreen() {
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [editingMeal, setEditingMeal] = useState(null);
     const [uploadingMealId, setUploadingMealId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Dynamic Styles
     const styles = getStyles(colors, theme);
@@ -172,10 +173,17 @@ export default function MealsScreen() {
     );
 
     // Prepare Sections (Safe filtering)
+    const filteredMeals = meals.filter(m => {
+        const query = searchQuery.toLowerCase();
+        const matchName = m.name.toLowerCase().includes(query);
+        const matchIngredient = m.ingredients?.some(ing => ing.toLowerCase().includes(query));
+        return matchName || matchIngredient;
+    });
+    
     const sections = [
-        { title: 'FLEISCH', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('meat')), key: 'meat', color: colors.meat },
-        { title: 'FISCH', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('fish')), key: 'fish', color: colors.fish },
-        { title: 'VEGGIE', data: meals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('veg')), key: 'veg', color: colors.veg },
+        { title: 'FLEISCH', data: filteredMeals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('meat')), key: 'meat', color: colors.meat },
+        { title: 'FISCH', data: filteredMeals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('fish')), key: 'fish', color: colors.fish },
+        { title: 'VEGGIE', data: filteredMeals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('veg')), key: 'veg', color: colors.veg },
     ];
 
     // Filter out empty sections if desired, or keep to show empty state per section?
@@ -219,6 +227,18 @@ export default function MealsScreen() {
                         <Ionicons name="person-outline" size={22} color={colors.text} />
                     </TouchableOpacity>
                 </View>
+            </View>
+
+            <View style={styles.searchContainer}>
+                <Ionicons name="search-outline" size={20} color="#888" style={styles.searchIcon} />
+                <TextInput
+                    style={styles.searchInput}
+                    placeholder="Gerichte durchsuchen..."
+                    placeholderTextColor="#888"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    clearButtonMode="while-editing"
+                />
             </View>
 
             {user?.isAnonymous && (
@@ -293,7 +313,7 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 24,
-        marginBottom: 24,
+        marginBottom: 16,
     },
     subtitle: {
         fontSize: 16,
@@ -322,6 +342,30 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         shadowOpacity: 0.2,
         shadowRadius: 8,
         elevation: 4,
+    },
+    searchContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.card,
+        marginHorizontal: 24,
+        marginBottom: 20,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        height: 46,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    searchIcon: {
+        marginRight: 10,
+    },
+    searchInput: {
+        flex: 1,
+        fontSize: 16,
+        color: colors.text,
+        height: '100%',
     },
     seedButton: {
         backgroundColor: '#4a5568',

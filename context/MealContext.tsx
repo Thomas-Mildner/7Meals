@@ -33,7 +33,7 @@ export const MealProvider = ({ children }: { children: React.ReactNode }) => {
         fetchMeals();
     }, [fetchMeals]);
 
-    const addMeal = async (name: string, categories: string[], description = '', isShared = false) => {
+    const addMeal = async (name: string, categories: string[], description = '', isShared = false, ingredients: string[] = []) => {
         if (!user) return;
 
         // Check for duplicates (case-insensitive)
@@ -48,7 +48,7 @@ export const MealProvider = ({ children }: { children: React.ReactNode }) => {
 
         try {
             const ownerEmail = user.email || '';
-            await addMealService(name, categories, user.uid, ownerEmail, isShared, description);
+            await addMealService(name, categories, user.uid, ownerEmail, isShared, description, ingredients);
             await fetchMeals();
         } catch (err) {
             setError(err);

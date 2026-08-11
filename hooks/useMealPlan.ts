@@ -177,7 +177,6 @@ export const useMealPlan = () => {
                 name: 'Brotzeit',
                 categories: ['brotzeit'],
                 isFavorite: false,
-                lastEaten: undefined,
                 userId: user?.uid || '',
                 ownerEmail: user?.email || '',
                 isShared: false,

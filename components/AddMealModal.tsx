@@ -8,6 +8,7 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
     const [categories, setCategories] = useState<string[]>([]);
     const [isShared, setIsShared] = useState(false);
     const [description, setDescription] = useState('');
+    const [ingredientsText, setIngredientsText] = useState('');
 
     // Dynamic styles
     const styles = getStyles(colors, theme);
@@ -15,11 +16,13 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
     const handleAdd = async () => {
         if (name && categories.length > 0) {
             try {
-                await onAdd(name, categories, isShared, description.trim());
+                const ingredients = ingredientsText.split('\n').map(i => i.trim()).filter(i => i.length > 0);
+                await onAdd(name, categories, description.trim(), isShared, ingredients);
                 setName('');
                 setCategories([]);
                 setIsShared(false);
                 setDescription('');
+                setIngredientsText('');
                 onClose();
             } catch (e: any) {
                 if (e.message === 'DUPLICATE_MEAL') {
@@ -72,6 +75,16 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
                         onChangeText={setDescription}
                         multiline
                         numberOfLines={2}
+                    />
+
+                    <TextInput
+                        style={[styles.input, styles.descriptionInput]}
+                        placeholder="Zutaten (optional, eine pro Zeile)"
+                        placeholderTextColor={theme === 'dark' ? "#999" : "#666"}
+                        value={ingredientsText}
+                        onChangeText={setIngredientsText}
+                        multiline
+                        numberOfLines={3}
                     />
 
                     <View style={styles.categoryContainer}>

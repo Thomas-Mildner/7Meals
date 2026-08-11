@@ -66,7 +66,7 @@
 1. **Automatische Einkaufsliste 🛒**: Generate a shopping list automatically from the weekly plan based on meal ingredients.
 2. **Smarter Rezept-Import per Link 🔗**: Automatically scrape recipe websites (e.g. Chefkoch) to fill in name, image, and ingredients.
 3. **"Social Feed" mit Freunden 🌍**: A dedicated "Feed" tab to see what friends are cooking and easily copy their meals into your own plan.
-4. **Statistiken & Insights 📊**: A dashboard showing interesting facts like vegetarian percentage, most cooked meals, or neglected recipes.
+4. **Statistiken & Insights 📊**: A improved dashboard showing interesting facts like vegetarian percentage, most cooked meals, or neglected recipes.
 5. **Zeit- und Aufwands-Filter ⏱️**: Add duration and difficulty to meals so the planner can suggest quick meals on weekdays and elaborate ones on weekends.
 6. **Zutaten-Vorratskammer (Pantry) 🥫**: Track pantry staples so they are automatically checked off the shopping list.
 7. **Koch-Tagebuch (Bilder-Galerie) 📸**: Instead of a single image, store a history of images and dates every time you cook a meal.

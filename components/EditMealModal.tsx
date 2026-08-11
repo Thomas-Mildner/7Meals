@@ -8,6 +8,7 @@ export default function EditMealModal({ visible, onClose, onSave, meal }: any) {
     const [categories, setCategories] = useState<string[]>([]);
     const [isShared, setIsShared] = useState(false);
     const [description, setDescription] = useState('');
+    const [ingredientsText, setIngredientsText] = useState('');
 
     const styles = getStyles(colors, theme);
 
@@ -18,17 +19,20 @@ export default function EditMealModal({ visible, onClose, onSave, meal }: any) {
             setCategories(meal.categories || []);
             setIsShared(meal.isShared || false);
             setDescription(meal.description || '');
+            setIngredientsText(meal.ingredients ? meal.ingredients.join('\n') : '');
         }
     }, [meal]);
 
     const handleSave = async () => {
         if (name && categories.length > 0) {
             try {
+                const ingredients = ingredientsText.split('\n').map(i => i.trim()).filter(i => i.length > 0);
                 await onSave(meal.id, {
                     name: name.trim(),
                     categories,
                     isShared,
                     description: description.trim(),
+                    ingredients
                 });
                 onClose();
             } catch (e: any) {
@@ -84,6 +88,16 @@ export default function EditMealModal({ visible, onClose, onSave, meal }: any) {
                         onChangeText={setDescription}
                         multiline
                         numberOfLines={2}
+                    />
+
+                    <TextInput
+                        style={[styles.input, styles.descriptionInput]}
+                        placeholder="Zutaten (optional, eine pro Zeile)"
+                        placeholderTextColor={theme === 'dark' ? "#999" : "#666"}
+                        value={ingredientsText}
+                        onChangeText={setIngredientsText}
+                        multiline
+                        numberOfLines={3}
                     />
 
                     <View style={styles.categoryContainer}>

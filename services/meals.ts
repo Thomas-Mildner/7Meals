@@ -8,7 +8,7 @@ const MEALS_COLLECTION = 'meals';
 // Old: { name: '...', category: 'meat' }
 // New: { name: '...', categories: ['meat', 'veg'] }
 
-export const addMeal = async (name: string, categories: string[], userId: string, ownerEmail = '', isShared = false, description = ''): Promise<Meal> => {
+export const addMeal = async (name: string, categories: string[], userId: string, ownerEmail = '', isShared = false, description = '', ingredients: string[] = []): Promise<Meal> => {
     try {
         const docRef = await addDoc(collection(db, MEALS_COLLECTION), {
             name,
@@ -19,8 +19,9 @@ export const addMeal = async (name: string, categories: string[], userId: string
             description,
             isFavorite: false,
             createdAt: new Date().toISOString(),
+            ingredients,
         });
-        return { id: docRef.id, name, categories, userId, ownerEmail: ownerEmail.toLowerCase(), isShared, description, isFavorite: false };
+        return { id: docRef.id, name, categories, userId, ownerEmail: ownerEmail.toLowerCase(), isShared, description, isFavorite: false, ingredients };
     } catch (error) {
         console.error("Error adding meal: ", error);
         throw error;
@@ -81,7 +82,7 @@ export const updateLastEatenDate = async (id: string, date: string): Promise<voi
     }
 };
 
-export const updateMeal = async (id: string, { name, categories, description, isShared, imageUrl }: Partial<Meal>): Promise<void> => {
+export const updateMeal = async (id: string, { name, categories, description, isShared, imageUrl, ingredients }: Partial<Meal>): Promise<void> => {
     try {
         const mealRef = doc(db, MEALS_COLLECTION, id);
         const updates: any = {};
@@ -92,6 +93,7 @@ export const updateMeal = async (id: string, { name, categories, description, is
         if (imageUrl !== undefined) {
             updates.imageUrl = imageUrl === null ? deleteField() : imageUrl;
         }
+        if (ingredients !== undefined) updates.ingredients = ingredients;
         updates.updatedAt = new Date().toISOString();
         await updateDoc(mealRef, updates);
     } catch (error) {
@@ -152,8 +154,9 @@ export const importMeal = async (meal: Partial<Meal>, userId: string, ownerEmail
             isShared: false,
             isFavorite: false,
             createdAt: new Date().toISOString(),
+            ingredients: meal.ingredients || [],
         });
-        return { id: docRef.id, name: meal.name || '', categories: meal.categories || [], description: meal.description || '', userId, ownerEmail: ownerEmail.toLowerCase(), isShared: false, isFavorite: false };
+        return { id: docRef.id, name: meal.name || '', categories: meal.categories || [], description: meal.description || '', userId, ownerEmail: ownerEmail.toLowerCase(), isShared: false, isFavorite: false, ingredients: meal.ingredients || [] };
     } catch (error) {
         console.error("Error importing meal: ", error);
         throw error;
