@@ -248,7 +248,7 @@ export default function MealsScreen() {
             <View style={styles.searchContainer}>
                 <Ionicons name="search-outline" size={20} color="#888" style={styles.searchIcon} />
                 <TextInput
-                    style={styles.searchInput}
+                    style={[styles.searchInput, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
                     placeholder="Gerichte durchsuchen..."
                     placeholderTextColor="#888"
                     value={searchQuery}
@@ -362,17 +362,14 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.card,
+        backgroundColor: 'rgba(128,128,128,0.08)',
         marginHorizontal: 24,
-        marginBottom: 20,
+        marginBottom: 24,
         paddingHorizontal: 16,
-        borderRadius: 12,
-        height: 46,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        borderRadius: 16,
+        height: 50,
+        borderWidth: 1,
+        borderColor: 'rgba(128,128,128,0.1)',
     },
     searchIcon: {
         marginRight: 10,
