@@ -167,6 +167,22 @@ export default function MealsScreen() {
                             </Text>
                         </View>
                     ))}
+                    
+                    {item.duration && (
+                        <View style={styles.metaBadge}>
+                            <Ionicons name="time-outline" size={12} color={colors.text} style={{marginRight: 4}} />
+                            <Text style={[styles.categoryText, { color: colors.text }]}>{item.duration} Min</Text>
+                        </View>
+                    )}
+                    
+                    {item.difficulty && (
+                        <View style={styles.metaBadge}>
+                            <Ionicons name="bar-chart-outline" size={12} color={colors.text} style={{marginRight: 4}} />
+                            <Text style={[styles.categoryText, { color: colors.text }]}>
+                                {item.difficulty === 'easy' ? 'Leicht' : item.difficulty === 'medium' ? 'Mittel' : 'Schwer'}
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </View>
         </LinearGradient>
@@ -425,6 +441,14 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
     categoryBadge: {
         alignSelf: 'flex-start',
         paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
+    },
+    metaBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(128,128,128,0.1)',
+        paddingHorizontal: 8,
         paddingVertical: 4,
         borderRadius: 8,
     },

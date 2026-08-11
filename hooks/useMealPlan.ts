@@ -12,7 +12,7 @@ export const useMealPlan = () => {
     const { user } = useAuth();
     const [plan, setPlan] = useState<PlanMeal[]>([]);
     const [startDate, setStartDate] = useState<string | null>(null);
-    const [config, setConfig] = useState({ meat: 2, fish: 2, veg: 2, brotzeit: 1 });
+    const [config, setConfig] = useState({ meat: 2, fish: 2, veg: 2, brotzeit: 1, maxTime: 0 });
     const [loadingPlan, setLoadingPlan] = useState(false);
 
     // Load plan on mount
@@ -57,7 +57,7 @@ export const useMealPlan = () => {
 
         // Iterate through valid days
         const promises = plan.map(async (dayItem, index) => {
-            if (!dayItem) return; // specific safety
+            if (!dayItem || dayItem.id.startsWith('brotzeit-') || dayItem.id.startsWith('placeholder-')) return;
 
             // If already marked as eaten (has specific lastEaten date matching plan), skip?
             // Actually, we want to ensure *unmarked* meals are marked.
@@ -91,9 +91,15 @@ export const useMealPlan = () => {
             await archiveOldPlan();
         }
 
-        const meatMeals = meals.filter(m => m.categories && m.categories.includes('meat'));
-        const fishMeals = meals.filter(m => m.categories && m.categories.includes('fish'));
-        const vegMeals = meals.filter(m => m.categories && m.categories.includes('veg'));
+        let availableMeals = meals;
+        if (config.maxTime > 0) {
+            // Include meals that match maxTime OR don't have a duration set
+            availableMeals = meals.filter(m => !m.duration || m.duration <= config.maxTime);
+        }
+
+        const meatMeals = availableMeals.filter(m => m.categories && m.categories.includes('meat'));
+        const fishMeals = availableMeals.filter(m => m.categories && m.categories.includes('fish'));
+        const vegMeals = availableMeals.filter(m => m.categories && m.categories.includes('veg'));
 
         const newPlanDays: PlanMeal[] = [];
 
@@ -103,9 +109,9 @@ export const useMealPlan = () => {
             let pool = [...source];
             // Fallback if specific category is empty
             if (pool.length === 0) {
-                if (meals.length > 0) {
-                    pool = [...meals];
-                    generatedWarnings.push(`Keine Gerichte für '${categoryLabel}' gefunden. Zufällige Alternativen gewählt.`);
+                if (availableMeals.length > 0) {
+                    pool = [...availableMeals];
+                    generatedWarnings.push(`Keine Gerichte für '${categoryLabel}' gefunden (Max. ${config.maxTime} Min). Zufällige Alternativen gewählt.`);
                 } else {
                     // No meals at all in DB
                     generatedWarnings.push(`Keine Gerichte für '${categoryLabel}' verfügbar.`);
@@ -129,7 +135,7 @@ export const useMealPlan = () => {
             const selected = [];
             // Basic weighted random selection
             for (let i = 0; i < count; i++) {
-                if (pool.length === 0) pool = source.length > 0 ? [...source] : [...meals];
+                if (pool.length === 0) pool = source.length > 0 ? [...source] : [...availableMeals];
 
                 // Safety: if pool is STILL empty (means meals.length was 0 initially and we are here?), break
                 if (pool.length === 0) break;
@@ -184,11 +190,36 @@ export const useMealPlan = () => {
             } as Meal);
         }
 
-        // Shuffle
-        for (let i = newPlanDays.length - 1; i > 0; i--) {
+        // Sort meals by "effort" to put quick ones on weekdays and elaborate ones on weekends
+        newPlanDays.sort((a, b) => {
+            const getEffort = (m: Meal) => {
+                let effort = m.duration || 30; // default 30 mins
+                if (m.difficulty === 'easy') effort -= 10;
+                if (m.difficulty === 'hard') effort += 20;
+                return effort;
+            };
+            return getEffort(a) - getEffort(b);
+        });
+
+        // The first 5 are weekdays (fastest), the last 2 are weekends (slowest)
+        const weekdays = newPlanDays.slice(0, 5);
+        const weekends = newPlanDays.slice(5, 7);
+
+        // Shuffle weekdays among themselves
+        for (let i = weekdays.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [newPlanDays[i], newPlanDays[j]] = [newPlanDays[j], newPlanDays[i]];
+            [weekdays[i], weekdays[j]] = [weekdays[j], weekdays[i]];
         }
+
+        // Shuffle weekends among themselves
+        for (let i = weekends.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [weekends[i], weekends[j]] = [weekends[j], weekends[i]];
+        }
+
+        // Combine them back
+        newPlanDays.length = 0;
+        newPlanDays.push(...weekdays, ...weekends);
 
         // Ensure 7 days and Save
         const finalPlan = newPlanDays.slice(0, 7);
@@ -291,9 +322,11 @@ export const useMealPlan = () => {
         // If marking as eaten, update the meal's global lastEaten for weighting
         if (!isCurrentlyEaten) {
             try {
-                const today = new Date().toISOString();
-                await updateLastEatenDate(updatedPlan[index].id, today);
-                await refreshMeals(); // Refresh global meal list to update scores
+                if (!updatedPlan[index].id.startsWith('brotzeit-') && !updatedPlan[index].id.startsWith('placeholder-')) {
+                    const today = new Date().toISOString();
+                    await updateLastEatenDate(updatedPlan[index].id, today);
+                    await refreshMeals(); // Refresh global meal list to update scores
+                }
             } catch (e) {
                 console.error("Failed to update global lastEaten", e);
             }

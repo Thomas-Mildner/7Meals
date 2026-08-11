@@ -9,6 +9,8 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
     const [isShared, setIsShared] = useState(false);
     const [description, setDescription] = useState('');
     const [ingredientsText, setIngredientsText] = useState('');
+    const [duration, setDuration] = useState<number | undefined>();
+    const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard' | undefined>();
 
     // Dynamic styles
     const styles = getStyles(colors, theme);
@@ -17,12 +19,14 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
         if (name && categories.length > 0) {
             try {
                 const ingredients = ingredientsText.split('\n').map(i => i.trim()).filter(i => i.length > 0);
-                await onAdd(name, categories, description.trim(), isShared, ingredients);
+                await onAdd(name, categories, description.trim(), isShared, ingredients, duration, difficulty);
                 setName('');
                 setCategories([]);
                 setIsShared(false);
                 setDescription('');
                 setIngredientsText('');
+                setDuration(undefined);
+                setDifficulty(undefined);
                 onClose();
             } catch (e: any) {
                 if (e.message === 'DUPLICATE_MEAL') {
@@ -108,6 +112,46 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
                         })}
                     </View>
 
+                    <Text style={styles.sectionLabel}>Dauer</Text>
+                    <View style={styles.categoryContainer}>
+                        {[15, 30, 45, 60].map((mins) => {
+                            const isSelected = duration === mins;
+                            return (
+                                <TouchableOpacity
+                                    key={mins}
+                                    style={[styles.categoryChip, isSelected && styles.selectedCategory, { borderColor: colors.primary }]}
+                                    onPress={() => setDuration(isSelected ? undefined : mins)}
+                                >
+                                    <Text style={[styles.categoryText, isSelected && styles.selectedCategoryText, { color: isSelected ? '#fff' : colors.text }]}>
+                                        {mins} Min
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+
+                    <Text style={styles.sectionLabel}>Aufwand</Text>
+                    <View style={styles.categoryContainer}>
+                        {[
+                            { id: 'easy', label: 'LEICHT' },
+                            { id: 'medium', label: 'MITTEL' },
+                            { id: 'hard', label: 'SCHWER' }
+                        ].map((diff) => {
+                            const isSelected = difficulty === diff.id;
+                            return (
+                                <TouchableOpacity
+                                    key={diff.id}
+                                    style={[styles.categoryChip, isSelected && styles.selectedCategory, { borderColor: colors.primary }]}
+                                    onPress={() => setDifficulty(isSelected ? undefined : diff.id as any)}
+                                >
+                                    <Text style={[styles.categoryText, isSelected && styles.selectedCategoryText, { color: isSelected ? '#fff' : colors.text }]}>
+                                        {diff.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+
                     <View style={styles.shareContainer}>
                         <View style={styles.shareTextContainer}>
                             <Text style={styles.shareLabel}>Mit Freunden teilen</Text>
@@ -177,6 +221,15 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         minHeight: 60,
         textAlignVertical: 'top',
         marginBottom: 20,
+    },
+    sectionLabel: {
+        width: '100%',
+        textAlign: 'left',
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: colors.text,
+        marginBottom: 10,
+        marginLeft: 10,
     },
     categoryContainer: {
         flexDirection: 'row',

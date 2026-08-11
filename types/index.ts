@@ -13,8 +13,10 @@ export interface Meal {
   createdAt?: string;
   updatedAt?: string;
   lastEaten?: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   ingredients?: string[];
+  duration?: number;
+  difficulty?: 'easy' | 'medium' | 'hard';
 }
 
 export interface MealPlanDay {
@@ -45,7 +47,7 @@ export interface MealContextType {
   loading: boolean;
   error: any;
   refreshMeals: () => Promise<void>;
-  addMeal: (name: string, categories: string[], description?: string, isShared?: boolean, ingredients?: string[]) => Promise<void>;
+  addMeal: (name: string, categories: string[], description?: string, isShared?: boolean, ingredients?: string[], duration?: number, difficulty?: 'easy' | 'medium' | 'hard') => Promise<void>;
   removeMeal: (id: string) => Promise<void>;
   markAsEaten: (id: string) => Promise<void>;
   toggleFavorite: (id: string, isFavorite: boolean) => Promise<void>;

@@ -231,16 +231,30 @@ export default function PlanScreen() {
                         </View>
                     ) : null}
 
-                    <View style={{ flexDirection: 'row', gap: 4 }}>
-                        <View style={{ flexDirection: 'row', gap: 4 }}>
-                            {item.categories && Array.isArray(item.categories) && item.categories.map((cat: string) => (
-                                <View key={cat} style={[styles.categoryBadge, { backgroundColor: colors[cat] + '20' }]}>
-                                    <Text style={[styles.categoryText, { color: colors[cat] }]}>
-                                        {getCategoryLabel(cat)}
-                                    </Text>
-                                </View>
-                            ))}
-                        </View>
+                    <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                        {item.categories && Array.isArray(item.categories) && item.categories.map((cat: string) => (
+                            <View key={cat} style={[styles.categoryBadge, { backgroundColor: colors[cat] + '20' }]}>
+                                <Text style={[styles.categoryText, { color: colors[cat] }]}>
+                                    {getCategoryLabel(cat)}
+                                </Text>
+                            </View>
+                        ))}
+
+                        {item.duration && (
+                            <View style={styles.metaBadge}>
+                                <Ionicons name="time-outline" size={12} color={colors.text} style={{ marginRight: 4 }} />
+                                <Text style={[styles.categoryText, { color: colors.text }]}>{item.duration} Min</Text>
+                            </View>
+                        )}
+
+                        {item.difficulty && (
+                            <View style={styles.metaBadge}>
+                                <Ionicons name="bar-chart-outline" size={12} color={colors.text} style={{ marginRight: 4 }} />
+                                <Text style={[styles.categoryText, { color: colors.text }]}>
+                                    {item.difficulty === 'easy' ? 'Leicht' : item.difficulty === 'medium' ? 'Mittel' : 'Schwer'}
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 </View>
             </LinearGradient>
@@ -558,10 +572,17 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         color: '#888',
     },
     categoryBadge: {
-        alignSelf: 'flex-start',
         paddingHorizontal: 8,
         paddingVertical: 4,
-        borderRadius: 6,
+        borderRadius: 8,
+    },
+    metaBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(128,128,128,0.1)',
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 8,
     },
     categoryText: {
         fontSize: 10,

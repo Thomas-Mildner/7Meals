@@ -8,7 +8,7 @@ const MEALS_COLLECTION = 'meals';
 // Old: { name: '...', category: 'meat' }
 // New: { name: '...', categories: ['meat', 'veg'] }
 
-export const addMeal = async (name: string, categories: string[], userId: string, ownerEmail = '', isShared = false, description = '', ingredients: string[] = []): Promise<Meal> => {
+export const addMeal = async (name: string, categories: string[], userId: string, ownerEmail = '', isShared = false, description = '', ingredients: string[] = [], duration?: number, difficulty?: 'easy' | 'medium' | 'hard'): Promise<Meal> => {
     try {
         const docRef = await addDoc(collection(db, MEALS_COLLECTION), {
             name,
@@ -20,8 +20,10 @@ export const addMeal = async (name: string, categories: string[], userId: string
             isFavorite: false,
             createdAt: new Date().toISOString(),
             ingredients,
+            duration: duration || null,
+            difficulty: difficulty || null,
         });
-        return { id: docRef.id, name, categories, userId, ownerEmail: ownerEmail.toLowerCase(), isShared, description, isFavorite: false, ingredients };
+        return { id: docRef.id, name, categories, userId, ownerEmail: ownerEmail.toLowerCase(), isShared, description, isFavorite: false, ingredients, duration, difficulty };
     } catch (error) {
         console.error("Error adding meal: ", error);
         throw error;
@@ -82,7 +84,7 @@ export const updateLastEatenDate = async (id: string, date: string): Promise<voi
     }
 };
 
-export const updateMeal = async (id: string, { name, categories, description, isShared, imageUrl, ingredients }: Partial<Meal>): Promise<void> => {
+export const updateMeal = async (id: string, { name, categories, description, isShared, imageUrl, ingredients, duration, difficulty }: Partial<Meal>): Promise<void> => {
     try {
         const mealRef = doc(db, MEALS_COLLECTION, id);
         const updates: any = {};
@@ -94,6 +96,8 @@ export const updateMeal = async (id: string, { name, categories, description, is
             updates.imageUrl = imageUrl === null ? deleteField() : imageUrl;
         }
         if (ingredients !== undefined) updates.ingredients = ingredients;
+        if (duration !== undefined) updates.duration = duration;
+        if (difficulty !== undefined) updates.difficulty = difficulty;
         updates.updatedAt = new Date().toISOString();
         await updateDoc(mealRef, updates);
     } catch (error) {
@@ -155,8 +159,10 @@ export const importMeal = async (meal: Partial<Meal>, userId: string, ownerEmail
             isFavorite: false,
             createdAt: new Date().toISOString(),
             ingredients: meal.ingredients || [],
+            duration: meal.duration || null,
+            difficulty: meal.difficulty || null,
         });
-        return { id: docRef.id, name: meal.name || '', categories: meal.categories || [], description: meal.description || '', userId, ownerEmail: ownerEmail.toLowerCase(), isShared: false, isFavorite: false, ingredients: meal.ingredients || [] };
+        return { id: docRef.id, name: meal.name || '', categories: meal.categories || [], description: meal.description || '', userId, ownerEmail: ownerEmail.toLowerCase(), isShared: false, isFavorite: false, ingredients: meal.ingredients || [], duration: meal.duration, difficulty: meal.difficulty };
     } catch (error) {
         console.error("Error importing meal: ", error);
         throw error;
