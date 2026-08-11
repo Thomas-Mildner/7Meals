@@ -313,6 +313,34 @@ export default function PlanScreen() {
                             {renderConfigCounter('Brotzeit', 'brotzeit')}
                         </View>
 
+                        <View style={styles.timeLimitContainer}>
+                            <Text style={[styles.counterLabel, { color: colors.text }]}>Max. Zeit pro Mahlzeit</Text>
+                            <View style={styles.timeLimitOptions}>
+                                {[
+                                    { label: 'Egal', value: 0 },
+                                    { label: '30 Min', value: 30 },
+                                    { label: '45 Min', value: 45 },
+                                    { label: '60 Min', value: 60 }
+                                ].map(option => (
+                                    <TouchableOpacity
+                                        key={option.value}
+                                        style={[
+                                            styles.timeOptionButton,
+                                            config.maxTime === option.value && { backgroundColor: colors.primary, borderColor: colors.primary }
+                                        ]}
+                                        onPress={() => updateConfig('maxTime', option.value)}
+                                    >
+                                        <Text style={[
+                                            styles.timeOptionText,
+                                            config.maxTime === option.value && { color: '#fff' }
+                                        ]}>
+                                            {option.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+
                         <TouchableOpacity
                             style={[styles.generateButton, totalDays !== 7 && styles.disabledButton]}
                             onPress={handleGenerate}
@@ -442,6 +470,28 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         fontWeight: '700',
         marginBottom: 8,
         fontSize: 14,
+    },
+    timeLimitContainer: {
+        marginBottom: 20,
+    },
+    timeLimitOptions: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 5,
+    },
+    timeOptionButton: {
+        flex: 1,
+        borderWidth: 1,
+        borderColor: '#888',
+        borderRadius: 10,
+        paddingVertical: 8,
+        marginHorizontal: 4,
+        alignItems: 'center',
+    },
+    timeOptionText: {
+        color: '#888',
+        fontSize: 12,
+        fontWeight: '600',
     },
     counterControls: {
         flexDirection: 'row',
