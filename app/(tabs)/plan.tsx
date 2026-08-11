@@ -1,23 +1,25 @@
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Image, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useMealPlan } from '../../hooks/useMealPlan';
 import { useMeals } from '../../hooks/useMeals';
 import ProfileModal from '../../components/ProfileModal';
 import ConfirmModal from '../../components/ConfirmModal';
-import { useState } from 'react';
-import { useTheme } from '../../context/ThemeContext';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadMealImage, deleteMealImage } from '../../services/storage';
+import { ActivityIndicator } from 'react-native';
 
 const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
 export default function PlanScreen() {
-    const { plan, startDate, config, updateConfig, generatePlan, swapMeal, clearPlan, toggleMealEaten } = useMealPlan();
-    const { meals } = useMeals();
+    const { plan, startDate, config, updateConfig, generatePlan, swapMeal, updatePlanMeal, clearPlan, toggleMealEaten } = useMealPlan();
+    const { meals, editMeal } = useMeals();
     const { colors, theme } = useTheme();
     const [profileModalVisible, setProfileModalVisible] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [isConfigExpanded, setIsConfigExpanded] = useState(true);
+    const [uploadingMealId, setUploadingMealId] = useState<string | null>(null);
 
     useEffect(() => {
         // Automatically collapse configuration if a plan exists
@@ -91,6 +93,65 @@ export default function PlanScreen() {
         }
     };
 
+    const handleTakeImage = async (meal: any, index: number) => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Berechtigung fehlt', 'Wir benötigen Kamerazugriff, um Bilder aufzunehmen.');
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 0.5,
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+            setUploadingMealId(meal.id);
+            try {
+                const imageUrl = await uploadMealImage(meal.id, result.assets[0].uri);
+                await editMeal(meal.id, { imageUrl });
+                await updatePlanMeal(index, { imageUrl });
+                Alert.alert('Erfolg', 'Bild wurde hochgeladen!');
+            } catch (e: any) {
+                console.error(e);
+                Alert.alert('Fehler', 'Das Bild konnte nicht hochgeladen werden. Stelle sicher, dass du in Firebase angemeldet bist und die Berechtigungen (Storage Rules) stimmen.');
+            } finally {
+                setUploadingMealId(null);
+            }
+        }
+    };
+
+    const handleDeleteImage = (meal: any, index: number) => {
+        const executeDelete = async () => {
+            try {
+                await deleteMealImage(meal.id);
+                await editMeal(meal.id, { imageUrl: null });
+                await updatePlanMeal(index, { imageUrl: undefined });
+            } catch (e) {
+                console.error(e);
+                await editMeal(meal.id, { imageUrl: null });
+                await updatePlanMeal(index, { imageUrl: undefined });
+            }
+        };
+
+        if (Platform.OS === 'web') {
+            if (window.confirm('Möchtest du dieses Bild wirklich löschen?')) {
+                executeDelete();
+            }
+        } else {
+            Alert.alert(
+                'Bild löschen',
+                'Möchtest du dieses Bild wirklich löschen?',
+                [
+                    { text: 'Abbrechen', style: 'cancel' },
+                    { text: 'Löschen', style: 'destructive', onPress: executeDelete }
+                ]
+            );
+        }
+    };
+
     const renderDayItem = ({ item, index }: { item: any, index: number }) => {
         // Use the eaten state directly from the plan slot
         const isEaten = !!item.isEaten;
@@ -144,8 +205,31 @@ export default function PlanScreen() {
                 <View style={[styles.mealContent, { borderColor: (item.categories && Array.isArray(item.categories) && item.categories.length > 0) ? colors[item.categories[0]] : '#444' }]}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Text style={styles.mealName}>{item.name}</Text>
-                        {item.isFavorite && <Ionicons name="heart" size={16} color="#ff6b6b" style={{ marginBottom: 6 }} />}
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <TouchableOpacity onPress={() => handleTakeImage(item, index)} hitSlop={10} style={{ marginRight: 8 }}>
+                                <Ionicons name="camera-outline" size={20} color={colors.primary} />
+                            </TouchableOpacity>
+                            {item.isFavorite && <Ionicons name="heart" size={16} color="#ff6b6b" />}
+                        </View>
                     </View>
+                    
+                    {uploadingMealId === item.id ? (
+                        <View style={styles.imageLoadingContainer}>
+                            <ActivityIndicator size="small" color={colors.primary} />
+                            <Text style={styles.imageLoadingText}>Wird hochgeladen...</Text>
+                        </View>
+                    ) : item.imageUrl ? (
+                        <View style={styles.imageContainer}>
+                            <Image source={{ uri: item.imageUrl }} style={styles.mealImage} resizeMode="cover" />
+                            <TouchableOpacity 
+                                style={styles.deleteImageButton} 
+                                onPress={() => handleDeleteImage(item, index)}
+                            >
+                                <Ionicons name="close-circle" size={24} color="rgba(255, 255, 255, 0.9)" />
+                            </TouchableOpacity>
+                        </View>
+                    ) : null}
+
                     <View style={{ flexDirection: 'row', gap: 4 }}>
                         <View style={{ flexDirection: 'row', gap: 4 }}>
                             {item.categories && Array.isArray(item.categories) && item.categories.map((cat: string) => (
@@ -438,6 +522,39 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         fontSize: 18,
         fontWeight: '700',
         marginBottom: 6,
+    },
+    mealImage: {
+        width: '100%',
+        height: 120,
+        borderRadius: 8,
+    },
+    imageContainer: {
+        position: 'relative',
+        marginBottom: 10,
+    },
+    deleteImageButton: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        borderRadius: 12,
+        zIndex: 10,
+        elevation: 10,
+        padding: 4,
+    },
+    imageLoadingContainer: {
+        width: '100%',
+        height: 100,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        borderRadius: 8,
+        marginBottom: 10,
+    },
+    imageLoadingText: {
+        marginTop: 8,
+        fontSize: 12,
+        color: '#888',
     },
     categoryBadge: {
         alignSelf: 'flex-start',

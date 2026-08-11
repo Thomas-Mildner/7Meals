@@ -1,4 +1,4 @@
-import { collection, addDoc, getDocs, deleteDoc, updateDoc, doc, query, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, deleteDoc, updateDoc, doc, query, where, deleteField } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
 import { Meal } from '../types';
 
@@ -81,7 +81,7 @@ export const updateLastEatenDate = async (id: string, date: string): Promise<voi
     }
 };
 
-export const updateMeal = async (id: string, { name, categories, description, isShared }: Partial<Meal>): Promise<void> => {
+export const updateMeal = async (id: string, { name, categories, description, isShared, imageUrl }: Partial<Meal>): Promise<void> => {
     try {
         const mealRef = doc(db, MEALS_COLLECTION, id);
         const updates: any = {};
@@ -89,6 +89,9 @@ export const updateMeal = async (id: string, { name, categories, description, is
         if (categories !== undefined) updates.categories = categories;
         if (description !== undefined) updates.description = description;
         if (isShared !== undefined) updates.isShared = isShared;
+        if (imageUrl !== undefined) {
+            updates.imageUrl = imageUrl === null ? deleteField() : imageUrl;
+        }
         updates.updatedAt = new Date().toISOString();
         await updateDoc(mealRef, updates);
     } catch (error) {

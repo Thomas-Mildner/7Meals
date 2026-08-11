@@ -248,6 +248,13 @@ export const useMealPlan = () => {
         }
     };
 
+    const updatePlanMeal = async (index: number, updates: Partial<Meal>) => {
+        if (!plan[index]) return;
+        const updatedPlan = [...plan];
+        updatedPlan[index] = { ...updatedPlan[index], ...updates };
+        await saveCurrentPlan(updatedPlan, startDate || new Date().toISOString());
+    };
+
     const updateConfig = (key: string, value: number) => {
         setConfig(prev => ({ ...prev, [key]: value }));
     }
@@ -294,5 +301,5 @@ export const useMealPlan = () => {
         }
     };
 
-    return { plan, startDate, config, updateConfig, generatePlan, swapMeal, clearPlan, toggleMealEaten, loadingPlan };
+    return { plan, startDate, config, updateConfig, generatePlan, swapMeal, updatePlanMeal, clearPlan, toggleMealEaten, loadingPlan };
 };

@@ -13,6 +13,7 @@ export interface Meal {
   createdAt?: string;
   updatedAt?: string;
   lastEaten?: string;
+  imageUrl?: string;
 }
 
 export interface MealPlanDay {

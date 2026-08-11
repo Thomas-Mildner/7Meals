@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert, Image, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useMeals } from '../../hooks/useMeals';
@@ -9,6 +9,8 @@ import EditMealModal from '../../components/EditMealModal';
 import ProfileModal from '../../components/ProfileModal';
 import FriendMealsModal from '../../components/FriendMealsModal';
 import { useAuth } from '../../context/AuthContext';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadMealImage, deleteMealImage } from '../../services/storage';
 
 
 export default function MealsScreen() {
@@ -20,6 +22,7 @@ export default function MealsScreen() {
     const [friendModalVisible, setFriendModalVisible] = useState(false);
     const [editModalVisible, setEditModalVisible] = useState(false);
     const [editingMeal, setEditingMeal] = useState(null);
+    const [uploadingMealId, setUploadingMealId] = useState<string | null>(null);
 
     // Dynamic Styles
     const styles = getStyles(colors, theme);
@@ -30,6 +33,63 @@ export default function MealsScreen() {
             case 'fish': return 'FISCH';
             case 'veg': return 'VEGGIE';
             default: return cat;
+        }
+    };
+
+    const handleTakeImage = async (meal: any) => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== 'granted') {
+            Alert.alert('Berechtigung fehlt', 'Wir benötigen Kamerazugriff, um Bilder aufzunehmen.');
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 0.5, // compress a bit
+        });
+
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+            setUploadingMealId(meal.id);
+            try {
+                const imageUrl = await uploadMealImage(meal.id, result.assets[0].uri);
+                await editMeal(meal.id, { imageUrl });
+            } catch (e: any) {
+                console.error(e);
+                Alert.alert('Fehler', 'Das Bild konnte nicht hochgeladen werden. Stelle sicher, dass du in Firebase angemeldet bist und die Berechtigungen (Storage Rules) stimmen.');
+            } finally {
+                setUploadingMealId(null);
+            }
+        }
+    };
+
+    const handleDeleteImage = (meal: any) => {
+        const executeDelete = async () => {
+            try {
+                // Optimistically remove from UI or wait for editMeal
+                await deleteMealImage(meal.id);
+                await editMeal(meal.id, { imageUrl: null });
+            } catch (e) {
+                console.error(e);
+                // Even if storage deletion fails (e.g. already deleted), we remove it from Firestore
+                await editMeal(meal.id, { imageUrl: null });
+            }
+        };
+
+        if (Platform.OS === 'web') {
+            if (window.confirm('Möchtest du dieses Bild wirklich löschen?')) {
+                executeDelete();
+            }
+        } else {
+            Alert.alert(
+                'Bild löschen',
+                'Möchtest du dieses Bild wirklich löschen?',
+                [
+                    { text: 'Abbrechen', style: 'cancel' },
+                    { text: 'Löschen', style: 'destructive', onPress: executeDelete }
+                ]
+            );
         }
     };
 
@@ -49,6 +109,9 @@ export default function MealsScreen() {
                     <View style={styles.actions}>
                         <TouchableOpacity onPress={() => { setEditingMeal(item); setEditModalVisible(true); }} hitSlop={10} style={{ marginRight: 10 }}>
                             <Ionicons name="create-outline" size={20} color={colors.primary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => handleTakeImage(item)} hitSlop={10} style={{ marginRight: 10 }}>
+                            <Ionicons name="camera-outline" size={20} color={colors.primary} />
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => {
                             if (user?.isAnonymous || !user?.email) {
@@ -70,6 +133,23 @@ export default function MealsScreen() {
 
                 {item.description ? (
                     <Text style={styles.mealDescription} numberOfLines={2}>{item.description}</Text>
+                ) : null}
+
+                {uploadingMealId === item.id ? (
+                    <View style={styles.imageLoadingContainer}>
+                        <ActivityIndicator size="small" color={colors.primary} />
+                        <Text style={styles.imageLoadingText}>Wird hochgeladen...</Text>
+                    </View>
+                ) : item.imageUrl ? (
+                    <View style={styles.imageContainer}>
+                        <Image source={{ uri: item.imageUrl }} style={styles.mealImage} resizeMode="cover" />
+                        <TouchableOpacity 
+                            style={styles.deleteImageButton} 
+                            onPress={() => handleDeleteImage(item)}
+                        >
+                            <Ionicons name="close-circle" size={24} color="rgba(255, 255, 255, 0.9)" />
+                        </TouchableOpacity>
+                    </View>
                 ) : null}
 
                 {item.lastEaten && (
@@ -307,6 +387,39 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
     categoryText: {
         fontSize: 12,
         fontWeight: '700',
+    },
+    imageContainer: {
+        position: 'relative',
+        marginBottom: 12,
+    },
+    mealImage: {
+        width: '100%',
+        height: 150,
+        borderRadius: 12,
+    },
+    deleteImageButton: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        borderRadius: 12,
+        zIndex: 10,
+        elevation: 10,
+        padding: 4,
+    },
+    imageLoadingContainer: {
+        width: '100%',
+        height: 100,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.05)',
+        borderRadius: 12,
+        marginBottom: 12,
+    },
+    imageLoadingText: {
+        marginTop: 8,
+        fontSize: 12,
+        color: '#888',
     },
     centerContainer: {
         flex: 1,
