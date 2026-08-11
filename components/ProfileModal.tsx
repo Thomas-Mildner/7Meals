@@ -9,6 +9,7 @@ import * as Notifications from 'expo-notifications';
 import DateTimePicker from './PlatformDateTimePicker';
 import ConfirmModal from './ConfirmModal';
 import { useTheme } from '../context/ThemeContext';
+import { useMeals } from '../hooks/useMeals';
 
 const DAYS = [
     { label: 'Sonntag', value: 1 },
@@ -23,6 +24,7 @@ const DAYS = [
 export default function ProfileModal({ visible, onClose }: any) {
     const { user, logout } = useAuth();
     const { theme, toggleTheme, colors } = useTheme();
+    const { meals } = useMeals();
     const [pushEnabled, setPushEnabled] = useState(false);
     const { registerForPushNotificationsAsync, scheduleWeeklyReminder, cancelAllNotifications } = usePushNotifications();
 
@@ -145,6 +147,20 @@ export default function ProfileModal({ visible, onClose }: any) {
         setShowLogoutConfirm(true);
     };
 
+    // Stats calculation
+    const totalMeals = meals.length;
+    const favoriteCount = meals.filter(m => m.isFavorite).length;
+    const vegCount = meals.filter(m => m.categories?.includes('veg')).length;
+    const vegPercentage = totalMeals > 0 ? Math.round((vegCount / totalMeals) * 100) : 0;
+    
+    let oldestMeal = null;
+    let newestMeal = null;
+    const mealsWithDates = meals.filter(m => m.lastEaten).sort((a, b) => new Date(a.lastEaten!).getTime() - new Date(b.lastEaten!).getTime());
+    if (mealsWithDates.length > 0) {
+        oldestMeal = mealsWithDates[0];
+        newestMeal = mealsWithDates[mealsWithDates.length - 1];
+    }
+
     // Dynamic styles
     const styles = getStyles(colors);
 
@@ -169,6 +185,49 @@ export default function ProfileModal({ visible, onClose }: any) {
                                 {user?.isAnonymous ? "Demo-Nutzer" : user?.email || "Nutzer"}
                             </Text>
                         </View>
+                    </View>
+
+                    <View style={styles.section}>
+                        <Text style={styles.sectionHeader}>Statistiken & Insights</Text>
+                        
+                        <View style={styles.statsGrid}>
+                            <View style={styles.statBox}>
+                                <Text style={styles.statValue}>{totalMeals}</Text>
+                                <Text style={styles.statLabel}>Gerichte</Text>
+                            </View>
+                            <View style={styles.statBox}>
+                                <Text style={styles.statValue}>{favoriteCount}</Text>
+                                <Text style={styles.statLabel}>Favoriten</Text>
+                            </View>
+                            <View style={styles.statBox}>
+                                <Text style={styles.statValue}>{vegPercentage}%</Text>
+                                <Text style={styles.statLabel}>Veggie</Text>
+                            </View>
+                        </View>
+                        
+                        {newestMeal && (
+                            <View style={styles.insightItem}>
+                                <View style={[styles.insightIcon, { backgroundColor: 'rgba(76, 209, 55, 0.15)' }]}>
+                                    <Ionicons name="restaurant-outline" size={20} color="#4cd137" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.insightTitle}>Zuletzt gegessen</Text>
+                                    <Text style={styles.insightText}>{newestMeal.name}</Text>
+                                </View>
+                            </View>
+                        )}
+                        
+                        {oldestMeal && oldestMeal.id !== newestMeal?.id && (
+                            <View style={styles.insightItem}>
+                                <View style={[styles.insightIcon, { backgroundColor: 'rgba(255, 107, 107, 0.15)' }]}>
+                                    <Ionicons name="time-outline" size={20} color="#ff6b6b" />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.insightTitle}>Lange nicht gegessen</Text>
+                                    <Text style={styles.insightText}>{oldestMeal.name}</Text>
+                                </View>
+                            </View>
+                        )}
                     </View>
 
                     <View style={styles.section}>
@@ -443,6 +502,65 @@ const getStyles = (colors: any) => StyleSheet.create({
         color: colors.text,
         fontSize: 16,
         fontWeight: '600',
+    },
+    statsGrid: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 16,
+    },
+    statBox: {
+        backgroundColor: colors.card,
+        padding: 16,
+        borderRadius: 16,
+        alignItems: 'center',
+        flex: 1,
+        marginHorizontal: 4,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+    },
+    statValue: {
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: colors.primary,
+        marginBottom: 4,
+    },
+    statLabel: {
+        fontSize: 12,
+        color: '#888',
+        fontWeight: '600',
+    },
+    insightItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.card,
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 10,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+    },
+    insightIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    insightTitle: {
+        fontSize: 12,
+        color: '#888',
+        marginBottom: 2,
+        fontWeight: '600',
+    },
+    insightText: {
+        fontSize: 15,
+        color: colors.text,
+        fontWeight: 'bold',
     },
     timePickerButton: {
         backgroundColor: 'rgba(128,128,128,0.1)',

@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadMealImage, deleteMealImage } from '../../services/storage';
 import { ActivityIndicator } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
@@ -212,7 +213,7 @@ export default function PlanScreen() {
                             {item.isFavorite && <Ionicons name="heart" size={16} color="#ff6b6b" />}
                         </View>
                     </View>
-                    
+
                     {uploadingMealId === item.id ? (
                         <View style={styles.imageLoadingContainer}>
                             <ActivityIndicator size="small" color={colors.primary} />
@@ -221,8 +222,8 @@ export default function PlanScreen() {
                     ) : item.imageUrl ? (
                         <View style={styles.imageContainer}>
                             <Image source={{ uri: item.imageUrl }} style={styles.mealImage} resizeMode="cover" />
-                            <TouchableOpacity 
-                                style={styles.deleteImageButton} 
+                            <TouchableOpacity
+                                style={styles.deleteImageButton}
                                 onPress={() => handleDeleteImage(item, index)}
                             >
                                 <Ionicons name="close-circle" size={24} color="rgba(255, 255, 255, 0.9)" />
