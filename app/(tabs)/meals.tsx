@@ -11,6 +11,7 @@ import FriendMealsModal from '../../components/FriendMealsModal';
 import { useAuth } from '../../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadMealImage, deleteMealImage } from '../../services/storage';
+import ImageSourceModal from '../../components/ImageSourceModal';
 
 
 export default function MealsScreen() {
@@ -24,6 +25,8 @@ export default function MealsScreen() {
     const [editingMeal, setEditingMeal] = useState(null);
     const [uploadingMealId, setUploadingMealId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [imageModalVisible, setImageModalVisible] = useState(false);
+    const [imageTargetMeal, setImageTargetMeal] = useState<any>(null);
 
     // Dynamic Styles
     const styles = getStyles(colors, theme);
@@ -37,31 +40,70 @@ export default function MealsScreen() {
         }
     };
 
-    const handleTakeImage = async (meal: any) => {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert('Berechtigung fehlt', 'Wir benötigen Kamerazugriff, um Bilder aufzunehmen.');
-            return;
+    const handleTakeImage = (meal: any) => {
+        const isDesktopWeb = Platform.OS === 'web' && typeof navigator !== 'undefined' && !/Mobi|Android|iPhone/i.test(navigator.userAgent);
+        
+        if (isDesktopWeb) {
+            executeImageSelection('gallery', meal);
+        } else {
+            setImageTargetMeal(meal);
+            setImageModalVisible(true);
         }
+    };
 
-        const result = await ImagePicker.launchCameraAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 0.5, // compress a bit
-        });
+    const handleImageSourceSelected = (source: 'camera' | 'gallery') => {
+        executeImageSelection(source, imageTargetMeal);
+    };
 
-        if (!result.canceled && result.assets && result.assets.length > 0) {
-            setUploadingMealId(meal.id);
-            try {
-                const imageUrl = await uploadMealImage(meal.id, result.assets[0].uri);
-                await editMeal(meal.id, { imageUrl });
-            } catch (e: any) {
-                console.error(e);
-                Alert.alert('Fehler', 'Das Bild konnte nicht hochgeladen werden. Stelle sicher, dass du in Firebase angemeldet bist und die Berechtigungen (Storage Rules) stimmen.');
-            } finally {
-                setUploadingMealId(null);
+    const executeImageSelection = async (source: 'camera' | 'gallery', targetMeal: any) => {
+        setImageModalVisible(false);
+        if (!targetMeal) return;
+
+        try {
+            let result;
+            
+            if (source === 'camera') {
+                const { status } = await ImagePicker.requestCameraPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert('Berechtigung fehlt', 'Wir benötigen Kamerazugriff, um Bilder aufzunehmen.');
+                    return;
+                }
+                result = await ImagePicker.launchCameraAsync({
+                    mediaTypes: ['images'],
+                    allowsEditing: true,
+                    aspect: [4, 3],
+                    quality: 0.5,
+                });
+            } else {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== 'granted') {
+                    Alert.alert('Berechtigung fehlt', 'Wir benötigen Zugriff auf deine Galerie.');
+                    return;
+                }
+                result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ['images'],
+                    allowsEditing: true,
+                    aspect: [4, 3],
+                    quality: 0.5,
+                });
             }
+
+            if (!result.canceled && result.assets && result.assets.length > 0) {
+                setUploadingMealId(targetMeal.id);
+                try {
+                    const imageUrl = await uploadMealImage(targetMeal.id, result.assets[0].uri);
+                    await editMeal(targetMeal.id, { imageUrl });
+                } catch (e: any) {
+                    console.error(e);
+                    Alert.alert('Fehler', 'Das Bild konnte nicht hochgeladen werden.');
+                } finally {
+                    setUploadingMealId(null);
+                }
+            }
+        } catch (e) {
+            console.error("Error launching image picker", e);
+        } finally {
+            setImageTargetMeal(null);
         }
     };
 
@@ -248,7 +290,7 @@ export default function MealsScreen() {
             <View style={styles.searchContainer}>
                 <Ionicons name="search-outline" size={20} color="#888" style={styles.searchIcon} />
                 <TextInput
-                    style={styles.searchInput}
+                    style={[styles.searchInput, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
                     placeholder="Gerichte durchsuchen..."
                     placeholderTextColor="#888"
                     value={searchQuery}
@@ -314,6 +356,14 @@ export default function MealsScreen() {
                 onSave={editMeal}
                 meal={editingMeal}
             />
+            <ImageSourceModal
+                visible={imageModalVisible}
+                onClose={() => {
+                    setImageModalVisible(false);
+                    setImageTargetMeal(null);
+                }}
+                onSelectSource={handleImageSourceSelected}
+            />
         </View>
     );
 }
@@ -362,17 +412,14 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
     searchContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.card,
+        backgroundColor: 'rgba(128,128,128,0.08)',
         marginHorizontal: 24,
-        marginBottom: 20,
+        marginBottom: 24,
         paddingHorizontal: 16,
-        borderRadius: 12,
-        height: 46,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
-        elevation: 2,
+        borderRadius: 16,
+        height: 50,
+        borderWidth: 1,
+        borderColor: 'rgba(128,128,128,0.1)',
     },
     searchIcon: {
         marginRight: 10,
