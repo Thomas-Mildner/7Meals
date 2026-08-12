@@ -11,6 +11,7 @@ import { uploadMealImage, deleteMealImage } from '../../services/storage';
 import { ActivityIndicator } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import ImageSourceModal from '../../components/ImageSourceModal';
+import MealDetailsModal from '../../components/MealDetailsModal';
 
 const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
@@ -24,6 +25,7 @@ export default function PlanScreen() {
     const [uploadingMealId, setUploadingMealId] = useState<string | null>(null);
     const [imageModalVisible, setImageModalVisible] = useState(false);
     const [imageTarget, setImageTarget] = useState<{meal: any, index: number} | null>(null);
+    const [viewingMealDetails, setViewingMealDetails] = useState<any | null>(null);
 
     useEffect(() => {
         // Automatically collapse configuration if a plan exists
@@ -128,8 +130,7 @@ export default function PlanScreen() {
                 }
                 result = await ImagePicker.launchCameraAsync({
                     mediaTypes: ['images'],
-                    allowsEditing: true,
-                    aspect: [4, 3],
+                    allowsEditing: false,
                     quality: 0.5,
                 });
             } else {
@@ -140,8 +141,7 @@ export default function PlanScreen() {
                 }
                 result = await ImagePicker.launchImageLibraryAsync({
                     mediaTypes: ['images'],
-                    allowsEditing: true,
-                    aspect: [4, 3],
+                    allowsEditing: false,
                     quality: 0.5,
                 });
             }
@@ -246,8 +246,13 @@ export default function PlanScreen() {
                         </TouchableOpacity>
                     </View>
                 </View>
-                <View style={[styles.mealContent, { borderColor: (item.categories && Array.isArray(item.categories) && item.categories.length > 0) ? colors[item.categories[0]] : '#444' }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                
+                <TouchableOpacity 
+                    activeOpacity={0.8}
+                    onPress={() => setViewingMealDetails(item)}
+                >
+                    <View style={[styles.mealContent, { borderColor: (item.categories && Array.isArray(item.categories) && item.categories.length > 0) ? (colors as any)[item.categories[0]] : '#444' }]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                         <Text style={styles.mealName}>{item.name}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <TouchableOpacity onPress={() => handleTakeImage(item, index)} hitSlop={10} style={{ marginRight: 8 }}>
@@ -276,20 +281,18 @@ export default function PlanScreen() {
 
                     <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
                         {item.categories && Array.isArray(item.categories) && item.categories.map((cat: string) => (
-                            <View key={cat} style={[styles.categoryBadge, { backgroundColor: colors[cat] + '20' }]}>
-                                <Text style={[styles.categoryText, { color: colors[cat] }]}>
+                            <View key={cat} style={[styles.categoryBadge, { backgroundColor: (colors as any)[cat] + '20' }]}>
+                                <Text style={[styles.categoryText, { color: (colors as any)[cat] }]}>
                                     {getCategoryLabel(cat)}
                                 </Text>
                             </View>
                         ))}
-
                         {item.duration && (
-                            <View style={styles.metaBadge}>
-                                <Ionicons name="time-outline" size={12} color={colors.text} style={{ marginRight: 4 }} />
-                                <Text style={[styles.categoryText, { color: colors.text }]}>{item.duration} Min</Text>
+                            <View style={[styles.categoryBadge, { backgroundColor: 'rgba(128,128,128,0.1)', flexDirection: 'row', alignItems: 'center' }]}>
+                                <Ionicons name="time-outline" size={12} color={colors.text} style={{marginRight: 4}} />
+                                <Text style={[styles.categoryText, { color: colors.text }]}>{item.duration}m</Text>
                             </View>
                         )}
-
                         {item.difficulty && (
                             <View style={styles.metaBadge}>
                                 <Ionicons name="bar-chart-outline" size={12} color={colors.text} style={{ marginRight: 4 }} />
@@ -300,6 +303,7 @@ export default function PlanScreen() {
                         )}
                     </View>
                 </View>
+                </TouchableOpacity>
             </LinearGradient>
         );
     };
@@ -435,6 +439,11 @@ export default function PlanScreen() {
                     setImageTarget(null);
                 }}
                 onSelectSource={handleImageSourceSelected}
+            />
+            <MealDetailsModal
+                visible={!!viewingMealDetails}
+                meal={viewingMealDetails}
+                onClose={() => setViewingMealDetails(null)}
             />
         </View >
     );

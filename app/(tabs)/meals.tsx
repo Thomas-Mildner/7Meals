@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadMealImage, deleteMealImage } from '../../services/storage';
 import ImageSourceModal from '../../components/ImageSourceModal';
+import MealDetailsModal from '../../components/MealDetailsModal';
 
 
 export default function MealsScreen() {
@@ -27,6 +28,8 @@ export default function MealsScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [imageModalVisible, setImageModalVisible] = useState(false);
     const [imageTargetMeal, setImageTargetMeal] = useState<any>(null);
+    const [viewingMealDetails, setViewingMealDetails] = useState<any | null>(null);
+    const [isCompactMode, setIsCompactMode] = useState(false);
 
     // Dynamic Styles
     const styles = getStyles(colors, theme);
@@ -70,8 +73,7 @@ export default function MealsScreen() {
                 }
                 result = await ImagePicker.launchCameraAsync({
                     mediaTypes: ['images'],
-                    allowsEditing: true,
-                    aspect: [4, 3],
+                    allowsEditing: false,
                     quality: 0.5,
                 });
             } else {
@@ -82,8 +84,7 @@ export default function MealsScreen() {
                 }
                 result = await ImagePicker.launchImageLibraryAsync({
                     mediaTypes: ['images'],
-                    allowsEditing: true,
-                    aspect: [4, 3],
+                    allowsEditing: false,
                     quality: 0.5,
                 });
             }
@@ -137,12 +138,17 @@ export default function MealsScreen() {
     };
 
     const renderItem = ({ item }: any) => (
-        <LinearGradient
-            colors={[colors.card, theme === 'dark' ? '#2a2a2a' : '#e6e6e6']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.mealCard}
+        <TouchableOpacity 
+            activeOpacity={0.9} 
+            onPress={() => setViewingMealDetails(item)}
+            style={{ marginBottom: 16 }}
         >
+            <LinearGradient
+                colors={[colors.card, theme === 'dark' ? '#2a2a2a' : '#e6e6e6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.mealCard, { marginBottom: 0 }]}
+            >
             {/* <View style={[styles.categoryStrip, { backgroundColor: Colors[item.category] }]} /> - Removing single color strip */}
             <View style={[styles.categoryStrip, { backgroundColor: theme === 'dark' ? '#444' : '#ddd' }]} />
 
@@ -174,7 +180,7 @@ export default function MealsScreen() {
                     </View>
                 </View>
 
-                {item.description ? (
+                {!isCompactMode && item.description ? (
                     <Text style={styles.mealDescription} numberOfLines={2}>{item.description}</Text>
                 ) : null}
 
@@ -183,7 +189,7 @@ export default function MealsScreen() {
                         <ActivityIndicator size="small" color={colors.primary} />
                         <Text style={styles.imageLoadingText}>Wird hochgeladen...</Text>
                     </View>
-                ) : item.imageUrl ? (
+                ) : !isCompactMode && item.imageUrl ? (
                     <View style={styles.imageContainer}>
                         <Image source={{ uri: item.imageUrl }} style={styles.mealImage} resizeMode="cover" />
                         <TouchableOpacity 
@@ -203,8 +209,8 @@ export default function MealsScreen() {
 
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                     {item.categories && Array.isArray(item.categories) && item.categories.map((cat: string) => (
-                        <View key={cat} style={[styles.categoryBadge, { backgroundColor: colors[cat] + '20' }]}>
-                            <Text style={[styles.categoryText, { color: colors[cat] }]}>
+                        <View key={cat} style={[styles.categoryBadge, { backgroundColor: (colors as any)[cat] + '20' }]}>
+                            <Text style={[styles.categoryText, { color: (colors as any)[cat] }]}>
                                 {getCategoryLabel(cat)}
                             </Text>
                         </View>
@@ -227,7 +233,8 @@ export default function MealsScreen() {
                     )}
                 </View>
             </View>
-        </LinearGradient>
+            </LinearGradient>
+        </TouchableOpacity>
     );
 
     // Prepare Sections (Safe filtering)
@@ -265,7 +272,12 @@ export default function MealsScreen() {
                     <Text style={styles.title}>Sammlung</Text>
                 </View>
                 <View style={styles.headerActions}>
-
+                    <TouchableOpacity
+                        style={[styles.iconButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+                        onPress={() => setIsCompactMode(!isCompactMode)}
+                    >
+                        <Ionicons name={isCompactMode ? "image-outline" : "list"} size={22} color={colors.text} />
+                    </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.iconButton, { backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
                         onPress={() => setFriendModalVisible(true)}
@@ -363,6 +375,11 @@ export default function MealsScreen() {
                     setImageTargetMeal(null);
                 }}
                 onSelectSource={handleImageSourceSelected}
+            />
+            <MealDetailsModal
+                visible={!!viewingMealDetails}
+                meal={viewingMealDetails}
+                onClose={() => setViewingMealDetails(null)}
             />
         </View>
     );
