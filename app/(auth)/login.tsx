@@ -8,15 +8,15 @@ import * as Google from 'expo-auth-session/providers/google';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../../config/firebaseConfig';
 import { useTheme } from '../../context/ThemeContext';
-
+import OnboardingWizard from '../../components/OnboardingWizard';
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
-    // Mode: 'login' | 'register'
     const [mode, setMode] = useState('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [wizardVisible, setWizardVisible] = useState(false);
 
     const { loginWithEmail, registerWithEmail, loginAnonymously, loginWithCredential, googleProvider } = useAuth();
     const { colors, theme } = useTheme();
@@ -108,6 +108,14 @@ export default function LoginScreen() {
                     </View>
                     <Text style={styles.appName}>7MEALS</Text>
                     <Text style={styles.tagline}>Plane deine Woche, iss besser.</Text>
+                    
+                    <TouchableOpacity 
+                        style={styles.wizardButton} 
+                        onPress={() => setWizardVisible(true)}
+                    >
+                        <Ionicons name="help-circle-outline" size={18} color={colors.primary} style={{marginRight: 6}} />
+                        <Text style={[styles.wizardButtonText, { color: colors.primary }]}>Was ist 7Meals?</Text>
+                    </TouchableOpacity>
                 </View>
 
                 <View style={styles.formContainer}>
@@ -180,6 +188,7 @@ export default function LoginScreen() {
 
                 </View>
             </View>
+            <OnboardingWizard visible={wizardVisible} onClose={() => setWizardVisible(false)} />
         </KeyboardAvoidingView>
     );
 }
@@ -227,6 +236,19 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         color: theme === 'dark' ? '#ccc' : '#555',
         fontSize: 16,
         marginTop: 8,
+    },
+    wizardButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 16,
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+        borderRadius: 20,
+    },
+    wizardButtonText: {
+        fontSize: 14,
+        fontWeight: '600',
     },
     formContainer: {
         backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.7)',
