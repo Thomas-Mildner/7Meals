@@ -495,6 +495,7 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         fontWeight: '700',
         color: colors.text,
     },
+
     configContent: {
         paddingHorizontal: 20,
         paddingBottom: 20,

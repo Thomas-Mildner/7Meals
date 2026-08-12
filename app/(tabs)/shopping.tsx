@@ -5,6 +5,7 @@ import { useMeals } from '../../hooks/useMeals';
 import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import ProfileModal from '../../components/ProfileModal';
 
 export default function ShoppingScreen() {
     const { plan, startDate } = useMealPlan();
@@ -14,6 +15,8 @@ export default function ShoppingScreen() {
 
     // Track checked items
     const [checkedItems, setCheckedItems] = useState<{ [key: string]: boolean }>({});
+    const [profileModalVisible, setProfileModalVisible] = useState(false);
+    const [isInfoExpanded, setIsInfoExpanded] = useState(false);
 
     // Generate shopping list from plan using live meal data for ingredients
     const shoppingList = useMemo(() => {
@@ -88,17 +91,7 @@ export default function ShoppingScreen() {
         }
     };
 
-    if (shoppingList.length === 0) {
-        return (
-            <View style={styles.emptyContainer}>
-                <Ionicons name="cart-outline" size={80} color={colors.primary} style={{ opacity: 0.5, marginBottom: 20 }} />
-                <Text style={styles.emptyTitle}>Einkaufsliste ist leer</Text>
-                <Text style={styles.emptyText}>
-                    Füge Gerichte mit Zutaten zu deinem Wochenplan hinzu, um hier automatisch eine Einkaufsliste zu sehen.
-                </Text>
-            </View>
-        );
-    }
+
 
     const renderItem = ({ item }: { item: { name: string, count: number, mealNames: string[] } }) => {
         const isChecked = checkedItems[item.name] || false;
@@ -138,19 +131,66 @@ export default function ShoppingScreen() {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Einkaufsliste</Text>
-                {Object.values(checkedItems).some(v => v) && (
-                    <TouchableOpacity onPress={clearChecked} style={styles.clearButton}>
-                        <Text style={styles.clearButtonText}>Zurücksetzen</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+                    {Object.values(checkedItems).some(v => v) && (
+                        <TouchableOpacity onPress={clearChecked} style={styles.clearButton}>
+                            <Text style={styles.clearButtonText}>Zurücksetzen</Text>
+                        </TouchableOpacity>
+                    )}
+                    <TouchableOpacity
+                        style={[{ backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' } as any]}
+                        onPress={() => setProfileModalVisible(true)}
+                    >
+                        <Ionicons name="person-outline" size={20} color={colors.text} />
                     </TouchableOpacity>
-                )}
+                </View>
             </View>
 
             <FlatList
                 data={shoppingList}
                 keyExtractor={(item) => item.name}
+                ListHeaderComponent={() => (
+                    <View style={styles.infoBoxContainer}>
+                        <TouchableOpacity 
+                            style={styles.infoBoxHeader} 
+                            onPress={() => setIsInfoExpanded(!isInfoExpanded)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <Ionicons name="information-circle-outline" size={20} color={colors.primary} />
+                                <Text style={styles.infoBoxTitle}>Wie funktioniert die Liste?</Text>
+                            </View>
+                            <Ionicons name={isInfoExpanded ? "chevron-up" : "chevron-down"} size={20} color={colors.text} />
+                        </TouchableOpacity>
+                        {isInfoExpanded && (
+                            <View style={styles.infoBoxContent}>
+                                <Text style={styles.infoBoxText}>
+                                    Diese Einkaufsliste wird völlig automatisch aus den Zutaten deiner Gerichte generiert, die du für die aktuelle Woche in den Wochenplan eingetragen hast. 
+                                </Text>
+                                <Text style={[styles.infoBoxText, { marginTop: 8 }]}>
+                                    Wenn du ein Gericht isst oder austauschst, aktualisiert sich die Liste automatisch!
+                                </Text>
+                            </View>
+                        )}
+                    </View>
+                )}
+                ListEmptyComponent={() => (
+                    <View style={[styles.emptyContainer, { marginTop: 40 }]}>
+                        <Ionicons name="cart-outline" size={80} color={colors.primary} style={{ opacity: 0.5, marginBottom: 20 }} />
+                        <Text style={styles.emptyTitle}>Einkaufsliste ist leer</Text>
+                        <Text style={styles.emptyText}>
+                            Füge Gerichte mit Zutaten zu deinem Wochenplan hinzu, um hier automatisch eine Einkaufsliste zu sehen.
+                        </Text>
+                    </View>
+                )}
                 renderItem={renderItem}
                 contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
+            />
+
+            <ProfileModal 
+                visible={profileModalVisible} 
+                onClose={() => setProfileModalVisible(false)} 
             />
         </View>
     );
@@ -161,6 +201,33 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         flex: 1,
         backgroundColor: colors.background,
         paddingTop: 60,
+    },
+    infoBoxContainer: {
+        backgroundColor: colors.card,
+        borderRadius: 16,
+        marginBottom: 20,
+        overflow: 'hidden',
+    },
+    infoBoxHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
+    },
+    infoBoxTitle: {
+        fontSize: 16,
+        fontWeight: '600',
+        color: colors.text,
+    },
+    infoBoxContent: {
+        paddingHorizontal: 16,
+        paddingBottom: 16,
+    },
+    infoBoxText: {
+        color: colors.text,
+        fontSize: 14,
+        lineHeight: 20,
+        opacity: 0.8,
     },
     header: {
         flexDirection: 'row',
