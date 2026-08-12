@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Modal, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { View, Text, TextInput, Modal, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, ActivityIndicator, Alert } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { scrapeRecipe } from '../utils/scraper';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function AddMealModal({ visible, onClose, onAdd }: any) {
     const { colors, theme } = useTheme();
@@ -11,6 +13,10 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
     const [ingredientsText, setIngredientsText] = useState('');
     const [duration, setDuration] = useState<number | undefined>();
     const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard' | undefined>();
+    const [importUrl, setImportUrl] = useState('');
+    const [isScraping, setIsScraping] = useState(false);
+    const [scrapedImageUrl, setScrapedImageUrl] = useState<string | null>(null);
+    const [progressMessage, setProgressMessage] = useState('');
 
     // Dynamic styles
     const styles = getStyles(colors, theme);
@@ -19,7 +25,7 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
         if (name && categories.length > 0) {
             try {
                 const ingredients = ingredientsText.split('\n').map(i => i.trim()).filter(i => i.length > 0);
-                await onAdd(name, categories, description.trim(), isShared, ingredients, duration, difficulty);
+                await onAdd(name, categories, description.trim(), isShared, ingredients, duration, difficulty, scrapedImageUrl);
                 setName('');
                 setCategories([]);
                 setIsShared(false);
@@ -27,6 +33,8 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
                 setIngredientsText('');
                 setDuration(undefined);
                 setDifficulty(undefined);
+                setImportUrl('');
+                setScrapedImageUrl(null);
                 onClose();
             } catch (e: any) {
                 if (e.message === 'DUPLICATE_MEAL') {
@@ -57,11 +65,61 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
         }
     };
 
+    const handleScrape = async () => {
+        if (!importUrl) return;
+        setIsScraping(true);
+        setProgressMessage('Start...');
+        try {
+            const data = await scrapeRecipe(importUrl, (msg) => setProgressMessage(msg));
+            if (data.name) setName(data.name);
+            if (data.description) setDescription(data.description);
+            if (data.ingredients.length > 0) setIngredientsText(data.ingredients.join('\n'));
+            if (data.prepTime) setDuration(data.prepTime);
+            if (data.image) setScrapedImageUrl(data.image);
+            setImportUrl(''); // clear after success
+        } catch (error) {
+            Alert.alert("Fehler", "Rezept konnte nicht importiert werden. Bitte überprüfe den Link.");
+        } finally {
+            setIsScraping(false);
+            setProgressMessage('');
+        }
+    };
+
     return (
         <Modal visible={visible} animationType="slide" transparent>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.centeredView}>
                 <View style={styles.modalView}>
                     <Text style={styles.modalTitle}>Neues Gericht hinzufügen</Text>
+
+                    {/* Scraper Input (Nur Mobile) */}
+                    {Platform.OS !== 'web' && (
+                        <View style={styles.importContainer}>
+                            <TextInput
+                                style={[styles.input, styles.importInput]}
+                                placeholder="Rezept-Link einfügen (z.B. Chefkoch)"
+                                placeholderTextColor={theme === 'dark' ? "#999" : "#666"}
+                                value={importUrl}
+                                onChangeText={setImportUrl}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                            />
+                            <TouchableOpacity style={[styles.importButton, { backgroundColor: colors.primary }]} onPress={handleScrape} disabled={isScraping || !importUrl}>
+                                {isScraping ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <Ionicons name="color-wand-outline" size={20} color="#fff" />
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    )}
+
+                    {isScraping && (
+                        <View style={{ width: '100%', marginBottom: 15, alignItems: 'center' }}>
+                            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '500' }}>
+                                🪄 {progressMessage || 'Rezept wird analysiert...'}
+                            </Text>
+                        </View>
+                    )}
 
                     <TextInput
                         style={styles.input}
@@ -99,8 +157,8 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
                                     key={cat}
                                     style={[
                                         styles.categoryChip,
-                                        isSelected && styles.selectedCategory,
-                                        { borderColor: colors[cat] }
+                                        { borderColor: isSelected ? colors[cat] : (theme === 'dark' ? '#444' : '#ddd') },
+                                        isSelected && { backgroundColor: colors[cat] }
                                     ]}
                                     onPress={() => toggleCategory(cat)}
                                 >
@@ -119,7 +177,11 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
                             return (
                                 <TouchableOpacity
                                     key={mins}
-                                    style={[styles.categoryChip, isSelected && styles.selectedCategory, { borderColor: colors.primary }]}
+                                    style={[
+                                        styles.categoryChip,
+                                        { borderColor: isSelected ? colors.primary : (theme === 'dark' ? '#444' : '#ddd') },
+                                        isSelected && { backgroundColor: colors.primary }
+                                    ]}
                                     onPress={() => setDuration(isSelected ? undefined : mins)}
                                 >
                                     <Text style={[styles.categoryText, isSelected && styles.selectedCategoryText, { color: isSelected ? '#fff' : colors.text }]}>
@@ -141,7 +203,11 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
                             return (
                                 <TouchableOpacity
                                     key={diff.id}
-                                    style={[styles.categoryChip, isSelected && styles.selectedCategory, { borderColor: colors.primary }]}
+                                    style={[
+                                        styles.categoryChip,
+                                        { borderColor: isSelected ? colors.primary : (theme === 'dark' ? '#444' : '#ddd') },
+                                        isSelected && { backgroundColor: colors.primary }
+                                    ]}
                                     onPress={() => setDifficulty(isSelected ? undefined : diff.id as any)}
                                 >
                                     <Text style={[styles.categoryText, isSelected && styles.selectedCategoryText, { color: isSelected ? '#fff' : colors.text }]}>
@@ -167,7 +233,7 @@ export default function AddMealModal({ visible, onClose, onAdd }: any) {
 
                     <View style={styles.buttonContainer}>
                         <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onClose}>
-                            <Text style={styles.buttonText}>Abbrechen</Text>
+                            <Text style={styles.cancelButtonText}>Abbrechen</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.button, styles.addButton, (!name || categories.length === 0) && styles.disabledButton]}
@@ -208,12 +274,32 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         color: colors.text,
         marginBottom: 20,
     },
+    importContainer: {
+        flexDirection: 'row',
+        marginBottom: 15,
+        gap: 10,
+    },
+    importInput: {
+        flex: 1,
+        marginBottom: 0,
+        backgroundColor: 'rgba(128,128,128,0.1)',
+        borderColor: 'transparent',
+    },
+    importButton: {
+        width: 50,
+        height: 50,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
     input: {
         width: '100%',
-        backgroundColor: colors.background,
+        backgroundColor: theme === 'dark' ? '#222' : '#f5f5f5',
         color: colors.text,
         padding: 15,
-        borderRadius: 10,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: theme === 'dark' ? '#333' : '#eee',
         marginBottom: 12,
         fontSize: 16,
     },
@@ -233,18 +319,17 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
     },
     categoryContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
+        flexWrap: 'wrap',
+        gap: 10,
         width: '100%',
-        marginBottom: 20,
+        marginBottom: 25,
     },
     categoryChip: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
+        paddingVertical: 10,
+        paddingHorizontal: 18,
         borderRadius: 20,
         borderWidth: 1,
-    },
-    selectedCategory: {
-        backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+        backgroundColor: theme === 'dark' ? '#1a1a1a' : '#fff',
     },
     categoryText: {
         color: colors.text,
@@ -290,7 +375,12 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         marginHorizontal: 5,
     },
     cancelButton: {
-        backgroundColor: '#ff4444',
+        backgroundColor: theme === 'dark' ? '#333' : '#f0f0f0',
+    },
+    cancelButtonText: {
+        color: colors.text,
+        fontWeight: 'bold',
+        fontSize: 16,
     },
     addButton: {
         backgroundColor: colors.primary,

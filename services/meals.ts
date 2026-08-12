@@ -8,7 +8,7 @@ const MEALS_COLLECTION = 'meals';
 // Old: { name: '...', category: 'meat' }
 // New: { name: '...', categories: ['meat', 'veg'] }
 
-export const addMeal = async (name: string, categories: string[], userId: string, ownerEmail = '', isShared = false, description = '', ingredients: string[] = [], duration?: number, difficulty?: 'easy' | 'medium' | 'hard'): Promise<Meal> => {
+export const addMeal = async (name: string, categories: string[], userId: string, ownerEmail = '', isShared = false, description = '', ingredients: string[] = [], duration?: number, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string | null): Promise<Meal> => {
     try {
         const docRef = await addDoc(collection(db, MEALS_COLLECTION), {
             name,
@@ -22,8 +22,9 @@ export const addMeal = async (name: string, categories: string[], userId: string
             ingredients,
             duration: duration || null,
             difficulty: difficulty || null,
+            imageUrl: imageUrl || null,
         });
-        return { id: docRef.id, name, categories, userId, ownerEmail: ownerEmail.toLowerCase(), isShared, description, isFavorite: false, ingredients, duration, difficulty };
+        return { id: docRef.id, name, categories, userId, ownerEmail: ownerEmail.toLowerCase(), isShared, description, isFavorite: false, ingredients, duration, difficulty, imageUrl };
     } catch (error) {
         console.error("Error adding meal: ", error);
         throw error;
