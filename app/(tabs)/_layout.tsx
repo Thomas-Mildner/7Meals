@@ -19,6 +19,9 @@ export default function TabLayout() {
                     elevation: 0,
                     height: 60,
                     paddingBottom: 5,
+                    maxWidth: 800,
+                    width: '100%',
+                    alignSelf: 'center',
                 },
                 headerShown: false,
             }}
