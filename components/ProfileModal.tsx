@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, Switch, Platform, ActionSheetIOS, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, Switch, Platform, ActionSheetIOS, ScrollView, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import * as Notifications from 'expo-notifications';
 import DateTimePicker from './PlatformDateTimePicker';
@@ -23,6 +24,7 @@ const DAYS = [
 
 export default function ProfileModal({ visible, onClose }: any) {
     const { user, logout } = useAuth();
+    const router = useRouter();
     const { theme, toggleTheme, colors } = useTheme();
     const { meals } = useMeals();
     const [pushEnabled, setPushEnabled] = useState(false);
@@ -342,13 +344,35 @@ export default function ProfileModal({ visible, onClose }: any) {
                     </View>
 
                     <View style={styles.section}>
-                        <Text style={styles.sectionHeader}>App Info</Text>
+                        <Text style={styles.sectionHeader}>Rechtliches & Info</Text>
+                        <TouchableOpacity style={styles.menuItem} onPress={() => { onClose(); router.push('/impressum'); }}>
+                            <View style={styles.menuItemIcon}>
+                                <Ionicons name="document-text-outline" size={24} color={colors.text} />
+                            </View>
+                            <Text style={[styles.menuItemText, { color: colors.text }]}>Impressum</Text>
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity style={styles.menuItem} onPress={() => { onClose(); router.push('/datenschutz'); }}>
+                            <View style={styles.menuItemIcon}>
+                                <Ionicons name="shield-checkmark-outline" size={24} color={colors.text} />
+                            </View>
+                            <Text style={[styles.menuItemText, { color: colors.text }]}>Datenschutz</Text>
+                        </TouchableOpacity>
+
                         <View style={styles.menuItem}>
                             <View style={styles.menuItemIcon}>
                                 <Ionicons name="code-slash-outline" size={24} color={colors.text} />
                             </View>
-                            <Text style={styles.menuItemText}>Version {require('../package.json').version}</Text>
+                            <Text style={[styles.menuItemText, { color: colors.text }]}>Version {require('../package.json').version}</Text>
                         </View>
+                    </View>
+
+                    <View style={{ alignItems: 'center', marginTop: 30, marginBottom: 20 }}>
+                        <TouchableOpacity onPress={() => Linking.openURL('https://mildner-thomas.de/?utm=7meals')}>
+                            <Text style={{ color: '#888', fontSize: 14 }}>
+                                Erstellt mit ♡ von Thomas Mildner
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                 </ScrollView>
 
