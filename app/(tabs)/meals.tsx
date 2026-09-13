@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert, Image, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, SectionList, TouchableOpacity, ActivityIndicator, Alert, Platform, TextInput } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useMeals } from '../../hooks/useMeals';
@@ -8,6 +9,7 @@ import AddMealModal from '../../components/AddMealModal';
 import EditMealModal from '../../components/EditMealModal';
 import ProfileModal from '../../components/ProfileModal';
 import FriendMealsModal from '../../components/FriendMealsModal';
+import ToastNotification from '../../components/ToastNotification';
 import { useAuth } from '../../context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadMealImage, deleteMealImage } from '../../services/storage';
@@ -30,6 +32,8 @@ export default function MealsScreen() {
     const [imageTargetMeal, setImageTargetMeal] = useState<any>(null);
     const [viewingMealDetails, setViewingMealDetails] = useState<any | null>(null);
     const [isCompactMode, setIsCompactMode] = useState(false);
+    const [toastVisible, setToastVisible] = useState(false);
+    const [toastMessage, setToastMessage] = useState('');
 
     // Dynamic Styles
     const styles = getStyles(colors, theme);
@@ -191,7 +195,13 @@ export default function MealsScreen() {
                     </View>
                 ) : !isCompactMode && item.imageUrl ? (
                     <View style={styles.imageContainer}>
-                        <Image source={{ uri: item.imageUrl }} style={styles.mealImage} resizeMode="cover" />
+                        <Image
+                            source={{ uri: item.imageUrl }}
+                            style={styles.mealImage}
+                            contentFit="cover"
+                            transition={200}
+                            cachePolicy="memory-disk"
+                        />
                         <TouchableOpacity 
                             style={styles.deleteImageButton} 
                             onPress={() => handleDeleteImage(item)}
@@ -266,6 +276,12 @@ export default function MealsScreen() {
 
     return (
         <View style={styles.container}>
+            <ToastNotification
+                visible={toastVisible}
+                message={toastMessage}
+                type="success"
+                onDismiss={() => setToastVisible(false)}
+            />
             <View style={styles.header}>
                 <View>
                     <Text style={styles.subtitle}>Verwalte deine</Text>
@@ -351,7 +367,13 @@ export default function MealsScreen() {
 
             <AddMealModal
                 visible={modalVisible}
-                onClose={() => setModalVisible(false)}
+                onClose={(addedMealName?: string) => {
+                    setModalVisible(false);
+                    if (addedMealName) {
+                        setToastMessage(`„${addedMealName}“ erfolgreich hinzugefügt! 🎉`);
+                        setToastVisible(true);
+                    }
+                }}
                 onAdd={addMeal}
             />
             <ProfileModal

@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useMealPlan } from '../../hooks/useMealPlan';
@@ -269,7 +270,13 @@ export default function PlanScreen() {
                         </View>
                     ) : item.imageUrl ? (
                         <View style={styles.imageContainer}>
-                            <Image source={{ uri: item.imageUrl }} style={styles.mealImage} resizeMode="cover" />
+                            <Image
+                                source={{ uri: item.imageUrl }}
+                                style={styles.mealImage}
+                                contentFit="cover"
+                                transition={200}
+                                cachePolicy="memory-disk"
+                            />
                             <TouchableOpacity
                                 style={styles.deleteImageButton}
                                 onPress={() => handleDeleteImage(item, index)}

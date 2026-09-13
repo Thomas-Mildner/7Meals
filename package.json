@@ -23,6 +23,9 @@
     "expo-crypto": "~15.0.9",
     "expo-dev-client": "~6.0.21",
     "expo-device": "~8.0.10",
+    "expo-font": "~14.0.12",
+    "expo-image": "~3.0.11",
+    "expo-image-manipulator": "~14.0.8",
     "expo-image-picker": "~17.0.11",
     "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.12",
@@ -43,7 +46,6 @@
   "private": true,
   "devDependencies": {
     "@types/react": "^19.2.18",
-    "@types/react-native": "^0.73.0",
-    "typescript": "~5.3.3"
+    "typescript": "~5.9.3"
   }
 }

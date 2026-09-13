@@ -47,7 +47,7 @@ export interface MealContextType {
   loading: boolean;
   error: any;
   refreshMeals: () => Promise<void>;
-  addMeal: (name: string, categories: string[], description?: string, isShared?: boolean, ingredients?: string[], duration?: number, difficulty?: 'easy' | 'medium' | 'hard') => Promise<void>;
+  addMeal: (name: string, categories: string[], description?: string, isShared?: boolean, ingredients?: string[], duration?: number, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string | null) => Promise<void>;
   removeMeal: (id: string) => Promise<void>;
   markAsEaten: (id: string) => Promise<void>;
   toggleFavorite: (id: string, isFavorite: boolean) => Promise<void>;

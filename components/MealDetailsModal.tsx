@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, Image, ScrollView, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView, SafeAreaView, Platform } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { Meal } from '../types';
@@ -44,7 +45,13 @@ export default function MealDetailsModal({ visible, meal, onClose }: MealDetails
                     {meal.imageUrl ? (
                         <View style={styles.imageHeader}>
                             <TouchableOpacity activeOpacity={0.9} onPress={() => setViewingImage(true)} style={{ flex: 1 }}>
-                                <Image source={{ uri: meal.imageUrl }} style={styles.headerImage} resizeMode="cover" />
+                                <Image
+                                    source={{ uri: meal.imageUrl }}
+                                    style={styles.headerImage}
+                                    contentFit="cover"
+                                    transition={200}
+                                    cachePolicy="memory-disk"
+                                />
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.closeButtonOverlay} onPress={onClose}>
                                 <Ionicons name="close" size={24} color="#fff" />

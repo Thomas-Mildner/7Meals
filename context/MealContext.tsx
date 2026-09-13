@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getMeals, addMeal as addMealService, deleteMeal as deleteMealService, toggleMealFavorite, updateLastEatenDate, toggleMealShared, getSharedMealsByEmail, importMeal as importMealService, updateMeal as updateMealService } from '../services/meals';
+import { uploadMealImage } from '../services/storage';
 import { useAuth } from './AuthContext';
 import { MealContextType, Meal } from '../types';
 
@@ -48,7 +49,20 @@ export const MealProvider = ({ children }: { children: React.ReactNode }) => {
 
         try {
             const ownerEmail = user.email || '';
-            await addMealService(name, categories, user.uid, ownerEmail, isShared, description, ingredients, duration, difficulty, imageUrl);
+            const isLocalImage = imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://');
+            const initialImageUrl = isLocalImage ? null : imageUrl;
+
+            const newMeal = await addMealService(name, categories, user.uid, ownerEmail, isShared, description, ingredients, duration, difficulty, initialImageUrl);
+
+            if (isLocalImage && imageUrl) {
+                try {
+                    const downloadUrl = await uploadMealImage(newMeal.id, imageUrl);
+                    await updateMealService(newMeal.id, { imageUrl: downloadUrl });
+                } catch (imgErr) {
+                    console.error("Error uploading meal image on addMeal:", imgErr);
+                }
+            }
+
             await fetchMeals();
         } catch (err) {
             setError(err);

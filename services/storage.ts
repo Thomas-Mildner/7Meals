@@ -1,9 +1,25 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '../config/firebaseConfig';
+import * as ImageManipulator from 'expo-image-manipulator';
+
+export const compressImage = async (imageUri: string): Promise<string> => {
+    try {
+        const result = await ImageManipulator.manipulateAsync(
+            imageUri,
+            [{ resize: { width: 1024 } }],
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        );
+        return result.uri;
+    } catch (error) {
+        console.warn("Could not compress image, falling back to original uri: ", error);
+        return imageUri;
+    }
+};
 
 export const uploadMealImage = async (mealId: string, imageUri: string): Promise<string> => {
     try {
-        const response = await fetch(imageUri);
+        const optimizedUri = await compressImage(imageUri);
+        const response = await fetch(optimizedUri);
         const blob = await response.blob();
         
         const imageRef = ref(storage, `meals/${mealId}/image.jpg`);

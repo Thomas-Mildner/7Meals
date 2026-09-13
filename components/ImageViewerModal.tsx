@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, StyleSheet, Modal, TouchableOpacity, Image, SafeAreaView } from 'react-native';
+import { View, StyleSheet, Modal, TouchableOpacity, SafeAreaView } from 'react-native';
+import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
@@ -29,7 +30,9 @@ export default function ImageViewerModal({ visible, imageUrl, onClose }: ImageVi
                     <Image 
                         source={{ uri: imageUrl }} 
                         style={styles.image} 
-                        resizeMode="contain" 
+                        contentFit="contain" 
+                        transition={200}
+                        cachePolicy="memory-disk"
                     />
                 </SafeAreaView>
             </View>
