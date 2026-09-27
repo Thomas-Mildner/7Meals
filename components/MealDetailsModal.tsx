@@ -70,6 +70,19 @@ export default function MealDetailsModal({ visible, meal, onClose }: MealDetails
                         <Text style={[styles.title, { color: colors.text }]}>{meal.name}</Text>
                         
                         <View style={styles.tagsRow}>
+                            {meal.mealTypes?.includes('breakfast') && (
+                                <View style={[styles.categoryBadge, { backgroundColor: '#E9C46A25', flexDirection: 'row', alignItems: 'center' }]}>
+                                    <Ionicons name="cafe-outline" size={12} color="#E9C46A" style={{ marginRight: 4 }} />
+                                    <Text style={[styles.categoryText, { color: '#E9C46A' }]}>FRÜHSTÜCK</Text>
+                                </View>
+                            )}
+                            {(!meal.mealTypes || meal.mealTypes.length === 0 || meal.mealTypes.includes('main')) && (
+                                <View style={[styles.categoryBadge, { backgroundColor: colors.primary + '25', flexDirection: 'row', alignItems: 'center' }]}>
+                                    <Ionicons name="restaurant-outline" size={12} color={colors.primary} style={{ marginRight: 4 }} />
+                                    <Text style={[styles.categoryText, { color: colors.primary }]}>MITTAG / ABEND</Text>
+                                </View>
+                            )}
+
                             {meal.categories && Array.isArray(meal.categories) && meal.categories.map((cat: string) => (
                                 <View key={cat} style={[styles.categoryBadge, { backgroundColor: (colors as any)[cat] + '20' }]}>
                                     <Text style={[styles.categoryText, { color: (colors as any)[cat] }]}>

@@ -13,6 +13,7 @@ import { ActivityIndicator } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import ImageSourceModal from '../../components/ImageSourceModal';
 import MealDetailsModal from '../../components/MealDetailsModal';
+import { DaySlot, DayPlan } from '../../types';
 
 const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
@@ -25,7 +26,7 @@ export default function PlanScreen() {
     const [isConfigExpanded, setIsConfigExpanded] = useState(true);
     const [uploadingMealId, setUploadingMealId] = useState<string | null>(null);
     const [imageModalVisible, setImageModalVisible] = useState(false);
-    const [imageTarget, setImageTarget] = useState<{meal: any, index: number} | null>(null);
+    const [imageTarget, setImageTarget] = useState<{meal: any, index: number, slot: DaySlot} | null>(null);
     const [viewingMealDetails, setViewingMealDetails] = useState<any | null>(null);
 
     useEffect(() => {
@@ -100,24 +101,24 @@ export default function PlanScreen() {
         }
     };
 
-    const handleTakeImage = (meal: any, index: number) => {
+    const handleTakeImage = (meal: any, index: number, slot: DaySlot) => {
         const isDesktopWeb = Platform.OS === 'web' && typeof navigator !== 'undefined' && !/Mobi|Android|iPhone/i.test(navigator.userAgent);
         
         if (isDesktopWeb) {
-            executeImageSelection('gallery', meal, index);
+            executeImageSelection('gallery', meal, index, slot);
         } else {
-            setImageTarget({ meal, index });
+            setImageTarget({ meal, index, slot });
             setImageModalVisible(true);
         }
     };
 
     const handleImageSourceSelected = (source: 'camera' | 'gallery') => {
         if (imageTarget) {
-            executeImageSelection(source, imageTarget.meal, imageTarget.index);
+            executeImageSelection(source, imageTarget.meal, imageTarget.index, imageTarget.slot);
         }
     };
 
-    const executeImageSelection = async (source: 'camera' | 'gallery', targetMeal: any, index: number) => {
+    const executeImageSelection = async (source: 'camera' | 'gallery', targetMeal: any, index: number, slot: DaySlot) => {
         setImageModalVisible(false);
 
         try {
@@ -152,7 +153,7 @@ export default function PlanScreen() {
                 try {
                     const imageUrl = await uploadMealImage(targetMeal.id, result.assets[0].uri);
                     await editMeal(targetMeal.id, { imageUrl });
-                    await updatePlanMeal(index, { imageUrl });
+                    await updatePlanMeal(index, slot, { imageUrl });
                     Alert.alert('Erfolg', 'Bild wurde hochgeladen!');
                 } catch (e: any) {
                     console.error(e);
@@ -168,16 +169,16 @@ export default function PlanScreen() {
         }
     };
 
-    const handleDeleteImage = (meal: any, index: number) => {
+    const handleDeleteImage = (meal: any, index: number, slot: DaySlot) => {
         const executeDelete = async () => {
             try {
                 await deleteMealImage(meal.id);
                 await editMeal(meal.id, { imageUrl: null });
-                await updatePlanMeal(index, { imageUrl: undefined });
+                await updatePlanMeal(index, slot, { imageUrl: undefined });
             } catch (e) {
                 console.error(e);
                 await editMeal(meal.id, { imageUrl: null });
-                await updatePlanMeal(index, { imageUrl: undefined });
+                await updatePlanMeal(index, slot, { imageUrl: undefined });
             }
         };
 
@@ -197,17 +198,153 @@ export default function PlanScreen() {
         }
     };
 
-    const renderDayItem = ({ item, index }: { item: any, index: number }) => {
-        // Use the eaten state directly from the plan slot
-        const isEaten = !!item.isEaten;
+    const renderMealSlot = (
+        title: string,
+        slot: DaySlot,
+        mealItem: any,
+        dayIndex: number,
+        iconName: any,
+        isLeftover = false
+    ) => {
+        if (!mealItem) return null;
+        const isEaten = !!mealItem.isEaten;
+        const isPlaceholder = mealItem.id?.startsWith('placeholder-') || mealItem.id?.startsWith('leftover-');
 
-        // Calculate date for this day box
+        const slotColor = slot === 'breakfast'
+            ? '#E9C46A'
+            : slot === 'dinner'
+                ? colors.primary
+                : colors.fish;
+
+        return (
+            <View style={styles.slotContainer}>
+                <View style={styles.slotHeader}>
+                    <View style={styles.slotTitleRow}>
+                        <Ionicons name={iconName} size={15} color={slotColor} style={{ marginRight: 6 }} />
+                        <Text style={[styles.slotTitle, { color: slotColor }]}>{title}</Text>
+                        {isLeftover && (
+                            <View style={styles.leftoverBadge}>
+                                <Ionicons name="repeat-outline" size={11} color={colors.primary} style={{ marginRight: 3 }} />
+                                <Text style={styles.leftoverBadgeText}>Reste vom Vortag</Text>
+                            </View>
+                        )}
+                    </View>
+
+                    <View style={styles.slotActions}>
+                        <TouchableOpacity
+                            onPress={() => toggleMealEaten(dayIndex, slot)}
+                            style={[
+                                styles.eatenButtonCompact,
+                                isEaten ? styles.eatenButtonActive : styles.eatenButtonInactive
+                            ]}
+                        >
+                            <Ionicons
+                                name={isEaten ? "checkmark-circle" : "ellipse-outline"}
+                                size={14}
+                                color={isEaten ? "#fff" : "#888"}
+                            />
+                            <Text style={[
+                                styles.eatenButtonTextCompact,
+                                { color: isEaten ? "#fff" : "#888" }
+                            ]}>
+                                {isEaten ? "Gegessen" : "Essen"}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {!isLeftover && (
+                            <TouchableOpacity onPress={() => swapMeal(dayIndex, slot)} hitSlop={8}>
+                                <Ionicons name="refresh-circle" size={24} color={colors.primary} />
+                            </TouchableOpacity>
+                        )}
+
+                        {!isPlaceholder && (
+                            <TouchableOpacity onPress={() => handleTakeImage(mealItem, dayIndex, slot)} hitSlop={8}>
+                                <Ionicons name="camera-outline" size={18} color={colors.primary} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+
+                <TouchableOpacity
+                    activeOpacity={isPlaceholder ? 1 : 0.8}
+                    onPress={() => !isPlaceholder && setViewingMealDetails(mealItem)}
+                >
+                    <View style={[
+                        styles.mealContent,
+                        { borderColor: (mealItem.categories && Array.isArray(mealItem.categories) && mealItem.categories.length > 0) ? ((colors as any)[mealItem.categories[0]] || slotColor) : slotColor }
+                    ]}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Text style={[styles.mealName, isPlaceholder && { fontStyle: 'italic', color: '#888' }]}>
+                                {mealItem.name}
+                            </Text>
+                            {mealItem.isFavorite && <Ionicons name="heart" size={14} color="#ff6b6b" />}
+                        </View>
+
+                        {uploadingMealId === mealItem.id ? (
+                            <View style={styles.imageLoadingContainer}>
+                                <ActivityIndicator size="small" color={colors.primary} />
+                                <Text style={styles.imageLoadingText}>Wird hochgeladen...</Text>
+                            </View>
+                        ) : mealItem.imageUrl ? (
+                            <View style={styles.imageContainer}>
+                                <Image
+                                    source={{ uri: mealItem.imageUrl }}
+                                    style={styles.mealImage}
+                                    contentFit="cover"
+                                    transition={200}
+                                    cachePolicy="memory-disk"
+                                />
+                                <TouchableOpacity
+                                    style={styles.deleteImageButton}
+                                    onPress={() => handleDeleteImage(mealItem, dayIndex, slot)}
+                                >
+                                    <Ionicons name="close-circle" size={22} color="rgba(255, 255, 255, 0.9)" />
+                                </TouchableOpacity>
+                            </View>
+                        ) : null}
+
+                        <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                            {mealItem.categories && Array.isArray(mealItem.categories) && mealItem.categories.map((cat: string) => (
+                                <View key={cat} style={[styles.categoryBadge, { backgroundColor: ((colors as any)[cat] || colors.primary) + '20' }]}>
+                                    <Text style={[styles.categoryText, { color: (colors as any)[cat] || colors.primary }]}>
+                                        {getCategoryLabel(cat)}
+                                    </Text>
+                                </View>
+                            ))}
+                            {mealItem.duration && (
+                                <View style={[styles.categoryBadge, { backgroundColor: 'rgba(128,128,128,0.1)', flexDirection: 'row', alignItems: 'center' }]}>
+                                    <Ionicons name="time-outline" size={11} color={colors.text} style={{ marginRight: 3 }} />
+                                    <Text style={[styles.categoryText, { color: colors.text }]}>{mealItem.duration}m</Text>
+                                </View>
+                            )}
+                            {mealItem.difficulty && (
+                                <View style={styles.metaBadge}>
+                                    <Ionicons name="bar-chart-outline" size={11} color={colors.text} style={{ marginRight: 3 }} />
+                                    <Text style={[styles.categoryText, { color: colors.text }]}>
+                                        {mealItem.difficulty === 'easy' ? 'Leicht' : mealItem.difficulty === 'medium' ? 'Mittel' : 'Schwer'}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                </TouchableOpacity>
+            </View>
+        );
+    };
+
+    const renderDayItem = ({ item, index }: { item: any, index: number }) => {
         let dateLabel = "";
         if (startDate) {
             const d = new Date(startDate);
             d.setDate(d.getDate() + index);
             dateLabel = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
         }
+
+        const dayPlan: DayPlan = (item && ('breakfast' in item || 'dinner' in item)) ? item : {
+            breakfast: { id: `bf-${index}`, name: 'Frühstück auswählen', categories: ['veg'], isFavorite: false, userId: '', ownerEmail: '', isShared: false, description: '', isEaten: false },
+            lunch: { id: `ln-${index}`, name: 'Reste vom Vortag', categories: ['brotzeit'], isFavorite: false, userId: '', ownerEmail: '', isShared: false, description: '', isEaten: false },
+            dinner: item || { id: `dn-${index}`, name: 'Gericht auswählen', categories: ['veg'], isFavorite: false, userId: '', ownerEmail: '', isShared: false, description: '', isEaten: false }
+        };
 
         return (
             <LinearGradient
@@ -218,99 +355,16 @@ export default function PlanScreen() {
             >
                 <View style={styles.dayHeader}>
                     <View>
-                        <Text style={styles.dayName}>{DAYS[index]}</Text>
+                        <Text style={styles.dayName}>{dayPlan.dayName || DAYS[index]}</Text>
                         {startDate && <Text style={{ color: '#888', fontSize: 12 }}>{dateLabel}</Text>}
                     </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <TouchableOpacity
-                            onPress={() => toggleMealEaten(index)}
-                            style={[
-                                styles.eatenButton,
-                                isEaten ? styles.eatenButtonActive : styles.eatenButtonInactive
-                            ]}
-                        >
-                            <Ionicons
-                                name={isEaten ? "checkmark-circle" : "ellipse-outline"}
-                                size={18}
-                                color={isEaten ? "#fff" : "#888"}
-                            />
-                            <Text style={[
-                                styles.eatenButtonText,
-                                { color: isEaten ? "#fff" : "#888" }
-                            ]}>
-                                {isEaten ? "Gegessen" : "Essen"}
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={() => swapMeal(index)} hitSlop={10}>
-                            <Ionicons name="refresh-circle" size={28} color={colors.primary} />
-                        </TouchableOpacity>
-                    </View>
                 </View>
-                
-                <TouchableOpacity 
-                    activeOpacity={0.8}
-                    onPress={() => setViewingMealDetails(item)}
-                >
-                    <View style={[styles.mealContent, { borderColor: (item.categories && Array.isArray(item.categories) && item.categories.length > 0) ? (colors as any)[item.categories[0]] : '#444' }]}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Text style={styles.mealName}>{item.name}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <TouchableOpacity onPress={() => handleTakeImage(item, index)} hitSlop={10} style={{ marginRight: 8 }}>
-                                <Ionicons name="camera-outline" size={20} color={colors.primary} />
-                            </TouchableOpacity>
-                            {item.isFavorite && <Ionicons name="heart" size={16} color="#ff6b6b" />}
-                        </View>
-                    </View>
 
-                    {uploadingMealId === item.id ? (
-                        <View style={styles.imageLoadingContainer}>
-                            <ActivityIndicator size="small" color={colors.primary} />
-                            <Text style={styles.imageLoadingText}>Wird hochgeladen...</Text>
-                        </View>
-                    ) : item.imageUrl ? (
-                        <View style={styles.imageContainer}>
-                            <Image
-                                source={{ uri: item.imageUrl }}
-                                style={styles.mealImage}
-                                contentFit="cover"
-                                transition={200}
-                                cachePolicy="memory-disk"
-                            />
-                            <TouchableOpacity
-                                style={styles.deleteImageButton}
-                                onPress={() => handleDeleteImage(item, index)}
-                            >
-                                <Ionicons name="close-circle" size={24} color="rgba(255, 255, 255, 0.9)" />
-                            </TouchableOpacity>
-                        </View>
-                    ) : null}
-
-                    <View style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
-                        {item.categories && Array.isArray(item.categories) && item.categories.map((cat: string) => (
-                            <View key={cat} style={[styles.categoryBadge, { backgroundColor: (colors as any)[cat] + '20' }]}>
-                                <Text style={[styles.categoryText, { color: (colors as any)[cat] }]}>
-                                    {getCategoryLabel(cat)}
-                                </Text>
-                            </View>
-                        ))}
-                        {item.duration && (
-                            <View style={[styles.categoryBadge, { backgroundColor: 'rgba(128,128,128,0.1)', flexDirection: 'row', alignItems: 'center' }]}>
-                                <Ionicons name="time-outline" size={12} color={colors.text} style={{marginRight: 4}} />
-                                <Text style={[styles.categoryText, { color: colors.text }]}>{item.duration}m</Text>
-                            </View>
-                        )}
-                        {item.difficulty && (
-                            <View style={styles.metaBadge}>
-                                <Ionicons name="bar-chart-outline" size={12} color={colors.text} style={{ marginRight: 4 }} />
-                                <Text style={[styles.categoryText, { color: colors.text }]}>
-                                    {item.difficulty === 'easy' ? 'Leicht' : item.difficulty === 'medium' ? 'Mittel' : 'Schwer'}
-                                </Text>
-                            </View>
-                        )}
-                    </View>
-                </View>
-                </TouchableOpacity>
+                {renderMealSlot('FRÜHSTÜCK', 'breakfast', dayPlan.breakfast, index, 'cafe-outline')}
+                <View style={styles.slotDivider} />
+                {renderMealSlot('MITTAGESSEN', 'lunch', dayPlan.lunch, index, 'restaurant-outline', true)}
+                <View style={styles.slotDivider} />
+                {renderMealSlot('ABENDESSEN', 'dinner', dayPlan.dinner, index, 'moon-outline')}
             </LinearGradient>
         );
     };
@@ -615,10 +669,65 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 10,
         borderBottomWidth: 1,
-        borderBottomColor: theme === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-        paddingBottom: 8,
+        borderBottomColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+        paddingBottom: 6,
+    },
+    slotContainer: {
+        marginVertical: 4,
+    },
+    slotHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 6,
+    },
+    slotTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    slotTitle: {
+        fontSize: 12,
+        fontWeight: '800',
+        letterSpacing: 0.8,
+    },
+    leftoverBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.primary + '20',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 6,
+        marginLeft: 6,
+    },
+    leftoverBadgeText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: colors.primary,
+    },
+    slotActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    slotDivider: {
+        height: 1,
+        backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+        marginVertical: 10,
+    },
+    eatenButtonCompact: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 3,
+        paddingHorizontal: 7,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 4,
+    },
+    eatenButtonTextCompact: {
+        fontSize: 10,
+        fontWeight: '600',
     },
     eatenButton: {
         flexDirection: 'row',

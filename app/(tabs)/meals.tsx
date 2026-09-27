@@ -32,8 +32,13 @@ export default function MealsScreen() {
     const [imageTargetMeal, setImageTargetMeal] = useState<any>(null);
     const [viewingMealDetails, setViewingMealDetails] = useState<any | null>(null);
     const [isCompactMode, setIsCompactMode] = useState(false);
+    const [mealTypeFilter, setMealTypeFilter] = useState<'all' | 'breakfast' | 'main'>('all');
     const [toastVisible, setToastVisible] = useState(false);
     const [toastMessage, setToastMessage] = useState('');
+
+    const breakfastCount = meals.filter(m => m.mealTypes?.includes('breakfast')).length;
+    const mainCount = meals.filter(m => !m.mealTypes || m.mealTypes.length === 0 || m.mealTypes.includes('main')).length;
+    const allCount = meals.length;
 
     // Dynamic Styles
     const styles = getStyles(colors, theme);
@@ -218,6 +223,19 @@ export default function MealsScreen() {
                 )}
 
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {item.mealTypes?.includes('breakfast') && (
+                        <View style={[styles.categoryBadge, { backgroundColor: '#E9C46A25', flexDirection: 'row', alignItems: 'center' }]}>
+                            <Ionicons name="cafe-outline" size={10} color="#E9C46A" style={{ marginRight: 3 }} />
+                            <Text style={[styles.categoryText, { color: '#E9C46A' }]}>Frühstück</Text>
+                        </View>
+                    )}
+                    {(!item.mealTypes || item.mealTypes.length === 0 || item.mealTypes.includes('main')) && (
+                        <View style={[styles.categoryBadge, { backgroundColor: colors.primary + '20', flexDirection: 'row', alignItems: 'center' }]}>
+                            <Ionicons name="restaurant-outline" size={10} color={colors.primary} style={{ marginRight: 3 }} />
+                            <Text style={[styles.categoryText, { color: colors.primary }]}>Mittag / Abend</Text>
+                        </View>
+                    )}
+
                     {item.categories && Array.isArray(item.categories) && item.categories.map((cat: string) => (
                         <View key={cat} style={[styles.categoryBadge, { backgroundColor: (colors as any)[cat] + '20' }]}>
                             <Text style={[styles.categoryText, { color: (colors as any)[cat] }]}>
@@ -252,13 +270,22 @@ export default function MealsScreen() {
         const query = searchQuery.toLowerCase();
         const matchName = m.name.toLowerCase().includes(query);
         const matchIngredient = m.ingredients?.some(ing => ing.toLowerCase().includes(query));
-        return matchName || matchIngredient;
+        const matchesQuery = matchName || matchIngredient;
+        if (!matchesQuery) return false;
+
+        const isBf = m.mealTypes?.includes('breakfast');
+        const isMain = !m.mealTypes || m.mealTypes.length === 0 || m.mealTypes.includes('main');
+
+        if (mealTypeFilter === 'breakfast') return isBf;
+        if (mealTypeFilter === 'main') return isMain;
+        return true;
     });
     
     const sections = [
         { title: 'FLEISCH', data: filteredMeals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('meat')), key: 'meat', color: colors.meat },
         { title: 'FISCH', data: filteredMeals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('fish')), key: 'fish', color: colors.fish },
         { title: 'VEGGIE', data: filteredMeals.filter(m => m.categories && Array.isArray(m.categories) && m.categories.includes('veg')), key: 'veg', color: colors.veg },
+        { title: 'BROTZEIT & WEITERES', data: filteredMeals.filter(m => !m.categories || !Array.isArray(m.categories) || (!m.categories.includes('meat') && !m.categories.includes('fish') && !m.categories.includes('veg'))), key: 'other', color: colors.secondary },
     ];
 
     // Filter out empty sections if desired, or keep to show empty state per section?
@@ -327,6 +354,56 @@ export default function MealsScreen() {
                 />
             </View>
 
+            <View style={styles.filterRow}>
+                <TouchableOpacity
+                    style={[
+                        styles.filterTab,
+                        mealTypeFilter === 'all' && styles.filterTabActive
+                    ]}
+                    onPress={() => setMealTypeFilter('all')}
+                >
+                    <Text style={[styles.filterTabText, mealTypeFilter === 'all' && styles.filterTabTextActive]}>
+                        Alle ({allCount})
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.filterTab,
+                        mealTypeFilter === 'breakfast' && [styles.filterTabActive, { backgroundColor: '#E9C46A', borderColor: '#E9C46A' }]
+                    ]}
+                    onPress={() => setMealTypeFilter('breakfast')}
+                >
+                    <Ionicons
+                        name="cafe-outline"
+                        size={14}
+                        color={mealTypeFilter === 'breakfast' ? '#1D3557' : colors.text}
+                        style={{ marginRight: 5 }}
+                    />
+                    <Text style={[styles.filterTabText, mealTypeFilter === 'breakfast' && { color: '#1D3557', fontWeight: 'bold' }]}>
+                        Frühstück ({breakfastCount})
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.filterTab,
+                        mealTypeFilter === 'main' && styles.filterTabActive
+                    ]}
+                    onPress={() => setMealTypeFilter('main')}
+                >
+                    <Ionicons
+                        name="restaurant-outline"
+                        size={14}
+                        color={mealTypeFilter === 'main' ? '#fff' : colors.text}
+                        style={{ marginRight: 5 }}
+                    />
+                    <Text style={[styles.filterTabText, mealTypeFilter === 'main' && styles.filterTabTextActive]}>
+                        Mittag / Abend ({mainCount})
+                    </Text>
+                </TouchableOpacity>
+            </View>
+
             {user?.isAnonymous && (
                 <View style={styles.demoBanner}>
                     <Ionicons name="information-circle-outline" size={20} color={colors.primary} style={{ marginRight: 8 }} />
@@ -357,7 +434,9 @@ export default function MealsScreen() {
                             </View>
                             <Text style={styles.emptyTitle}>Noch keine Gerichte</Text>
                             <Text style={styles.emptyText}>
-                                Füge deine Lieblingsgerichte hinzu oder tippe auf das Schraubenschlüssel-Symbol für Beispieldaten.
+                                {mealTypeFilter === 'breakfast' 
+                                    ? "Noch keine Frühstücks-Gerichte vorhanden. Tippe auf '+' um eines hinzuzufügen!"
+                                    : "Füge deine Lieblingsgerichte hinzu oder tippe auf das Schraubenschlüssel-Symbol für Beispieldaten."}
                             </Text>
                         </View>
                     }
@@ -367,6 +446,7 @@ export default function MealsScreen() {
 
             <AddMealModal
                 visible={modalVisible}
+                initialMealType={mealTypeFilter === 'breakfast' ? 'breakfast' : 'main'}
                 onClose={(addedMealName?: string) => {
                     setModalVisible(false);
                     if (addedMealName) {
@@ -453,12 +533,40 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         alignItems: 'center',
         backgroundColor: 'rgba(128,128,128,0.08)',
         marginHorizontal: 24,
-        marginBottom: 24,
+        marginBottom: 12,
         paddingHorizontal: 16,
         borderRadius: 16,
         height: 50,
         borderWidth: 1,
         borderColor: 'rgba(128,128,128,0.1)',
+    },
+    filterRow: {
+        flexDirection: 'row',
+        paddingHorizontal: 24,
+        marginBottom: 16,
+        gap: 8,
+    },
+    filterTab: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 7,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        backgroundColor: theme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+        borderWidth: 1,
+        borderColor: 'transparent',
+    },
+    filterTabActive: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    filterTabText: {
+        fontSize: 12,
+        fontWeight: '600',
+        color: colors.text,
+    },
+    filterTabTextActive: {
+        color: '#fff',
     },
     searchIcon: {
         marginRight: 10,

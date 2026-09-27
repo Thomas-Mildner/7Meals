@@ -2,15 +2,15 @@ import { useState, useCallback, useEffect } from 'react';
 import { useMeals } from './useMeals';
 import { useAuth } from '../context/AuthContext';
 import { savePlan as savePlanService, getPlan as getPlanService } from '../services/plan';
-import { Meal } from '../types';
-
-type PlanMeal = Meal & { isEaten?: boolean };
+import { Meal, DayPlan, DaySlot, PlanMeal } from '../types';
 import { updateLastEatenDate } from '../services/meals';
+
+const DAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
 export const useMealPlan = () => {
     const { meals, refreshMeals } = useMeals();
     const { user } = useAuth();
-    const [plan, setPlan] = useState<PlanMeal[]>([]);
+    const [plan, setPlan] = useState<DayPlan[]>([]);
     const [startDate, setStartDate] = useState<string | null>(null);
     const [config, setConfig] = useState({ meat: 2, fish: 2, veg: 2, brotzeit: 1, maxTime: 0 });
     const [loadingPlan, setLoadingPlan] = useState(false);
@@ -22,8 +22,56 @@ export const useMealPlan = () => {
             setLoadingPlan(true);
             try {
                 const storedPlan = await getPlanService(user.uid);
-                if (storedPlan && storedPlan.days) {
-                    setPlan(storedPlan.days);
+                if (storedPlan && storedPlan.days && storedPlan.days.length > 0) {
+                    // Backwards compatibility migration: if storedPlan.days is old format (PlanMeal[])
+                    const migratedDays: DayPlan[] = storedPlan.days.map((dayItem: any, index: number) => {
+                        if (dayItem && ('dinner' in dayItem || 'breakfast' in dayItem)) {
+                            return dayItem as DayPlan;
+                        } else {
+                            // Old single-meal format
+                            const oldMeal = dayItem as PlanMeal;
+                            const prevDinner = index > 0 && storedPlan.days[index - 1] ? storedPlan.days[index - 1] : null;
+                            return {
+                                dayName: DAYS[index] || `Tag ${index + 1}`,
+                                breakfast: {
+                                    id: `placeholder-breakfast-${index}`,
+                                    name: 'Frühstück auswählen',
+                                    categories: ['veg'],
+                                    mealTypes: ['breakfast'],
+                                    isFavorite: false,
+                                    userId: user.uid,
+                                    ownerEmail: user.email || '',
+                                    isShared: false,
+                                    description: '',
+                                    isEaten: false
+                                },
+                                lunch: prevDinner ? { ...prevDinner, isEaten: false } : {
+                                    id: `leftover-prev-${index}`,
+                                    name: 'Reste vom Vortag',
+                                    categories: ['brotzeit'],
+                                    isFavorite: false,
+                                    userId: user.uid,
+                                    ownerEmail: '',
+                                    isShared: false,
+                                    description: 'Essen vom Vortag',
+                                    isEaten: false
+                                },
+                                dinner: oldMeal || {
+                                    id: `placeholder-dinner-${index}`,
+                                    name: 'Gericht auswählen',
+                                    categories: ['veg'],
+                                    mealTypes: ['main'],
+                                    isFavorite: false,
+                                    userId: user.uid,
+                                    ownerEmail: '',
+                                    isShared: false,
+                                    description: '',
+                                    isEaten: false
+                                }
+                            };
+                        }
+                    });
+                    setPlan(migratedDays);
                     setStartDate(storedPlan.startDate);
                 }
             } catch (e) {
@@ -35,7 +83,7 @@ export const useMealPlan = () => {
         loadPlan();
     }, [user]);
 
-    const saveCurrentPlan = async (newPlan: PlanMeal[], newStartDate: string) => {
+    const saveCurrentPlan = async (newPlan: DayPlan[], newStartDate: string) => {
         if (!user) return;
         setPlan(newPlan);
         setStartDate(newStartDate);
@@ -54,32 +102,33 @@ export const useMealPlan = () => {
 
         console.log("Archiving old plan...");
         const start = new Date(startDate);
+        const promises: Promise<void>[] = [];
 
-        // Iterate through valid days
-        const promises = plan.map(async (dayItem, index) => {
-            if (!dayItem || dayItem.id.startsWith('brotzeit-') || dayItem.id.startsWith('placeholder-')) return;
+        plan.forEach((dayItem, index) => {
+            if (!dayItem) return;
 
-            // If already marked as eaten (has specific lastEaten date matching plan), skip?
-            // Actually, we want to ensure *unmarked* meals are marked.
-            // But we need to be careful not to overwrite a RECENT manual entry with an older theoretical one?
-            // "If no meal was ate but plan was generated... assume meals were eaten"
-
-            // Calculate theoretical date
             const theoreticalDate = new Date(start);
             theoreticalDate.setDate(start.getDate() + index);
             const isoDate = theoreticalDate.toISOString();
 
-            // We update the meal's lastEaten date to this theoretical date
-            // This works perfectly for the history
-            try {
-                await updateLastEatenDate(dayItem.id, isoDate);
-            } catch (e) {
-                console.error(`Failed to archive meal ${dayItem.name}`, e);
+            if (dayItem.breakfast && !dayItem.breakfast.id.startsWith('brotzeit-') && !dayItem.breakfast.id.startsWith('placeholder-')) {
+                promises.push(
+                    updateLastEatenDate(dayItem.breakfast.id, isoDate).catch(e => {
+                        console.error(`Failed to archive meal ${dayItem.breakfast.name}`, e);
+                    })
+                );
+            }
+
+            if (dayItem.dinner && !dayItem.dinner.id.startsWith('brotzeit-') && !dayItem.dinner.id.startsWith('placeholder-')) {
+                promises.push(
+                    updateLastEatenDate(dayItem.dinner.id, isoDate).catch(e => {
+                        console.error(`Failed to archive meal ${dayItem.dinner.name}`, e);
+                    })
+                );
             }
         });
 
         await Promise.all(promises);
-        // Refresh meals to update 'lastEaten' in local state immediately so algorithm sees it
         await refreshMeals();
     };
 
@@ -91,29 +140,25 @@ export const useMealPlan = () => {
             await archiveOldPlan();
         }
 
-        let availableMeals = meals;
+        const generatedWarnings: string[] = [];
+
+        // --- DINNER GENERATION ---
+        let mainMeals = meals.filter(m => !m.mealTypes || m.mealTypes.length === 0 || m.mealTypes.includes('main'));
         if (config.maxTime > 0) {
-            // Include meals that match maxTime OR don't have a duration set
-            availableMeals = meals.filter(m => !m.duration || m.duration <= config.maxTime);
+            mainMeals = mainMeals.filter(m => !m.duration || m.duration <= config.maxTime);
         }
 
-        const meatMeals = availableMeals.filter(m => m.categories && m.categories.includes('meat'));
-        const fishMeals = availableMeals.filter(m => m.categories && m.categories.includes('fish'));
-        const vegMeals = availableMeals.filter(m => m.categories && m.categories.includes('veg'));
-
-        const newPlanDays: PlanMeal[] = [];
-
-        const generatedWarnings: string[] = [];
+        const meatMeals = mainMeals.filter(m => m.categories && m.categories.includes('meat'));
+        const fishMeals = mainMeals.filter(m => m.categories && m.categories.includes('fish'));
+        const vegMeals = mainMeals.filter(m => m.categories && m.categories.includes('veg'));
 
         const getRandomMeals = (source: Meal[], count: number, categoryLabel: string): PlanMeal[] => {
             let pool = [...source];
-            // Fallback if specific category is empty
             if (pool.length === 0) {
-                if (availableMeals.length > 0) {
-                    pool = [...availableMeals];
+                if (mainMeals.length > 0) {
+                    pool = [...mainMeals];
                     generatedWarnings.push(`Keine Gerichte für '${categoryLabel}' gefunden (Max. ${config.maxTime} Min). Zufällige Alternativen gewählt.`);
                 } else {
-                    // No meals at all in DB
                     generatedWarnings.push(`Keine Gerichte für '${categoryLabel}' verfügbar.`);
                     const placeholders: PlanMeal[] = [];
                     for (let k = 0; k < count; k++) {
@@ -121,23 +166,22 @@ export const useMealPlan = () => {
                             id: `placeholder-${categoryLabel}-${Date.now()}-${k}`,
                             name: `Gericht hinzufügen (${categoryLabel})`,
                             categories: [],
+                            mealTypes: ['main'],
                             isFavorite: false,
                             userId: user?.uid || '',
                             ownerEmail: user?.email || '',
                             isShared: false,
-                            description: ''
-                        } as Meal);
+                            description: '',
+                            isEaten: false
+                        } as PlanMeal);
                     }
                     return placeholders;
                 }
             }
 
-            const selected = [];
-            // Basic weighted random selection
+            const selected: PlanMeal[] = [];
             for (let i = 0; i < count; i++) {
-                if (pool.length === 0) pool = source.length > 0 ? [...source] : [...availableMeals];
-
-                // Safety: if pool is STILL empty (means meals.length was 0 initially and we are here?), break
+                if (pool.length === 0) pool = source.length > 0 ? [...source] : [...mainMeals];
                 if (pool.length === 0) break;
 
                 const scoredPool = pool.map(meal => {
@@ -166,34 +210,36 @@ export const useMealPlan = () => {
                     }
                 }
 
-                selected.push(chosenMeal);
+                selected.push({ ...chosenMeal, isEaten: false });
                 pool = pool.filter(m => m.id !== chosenMeal.id);
             }
             return selected;
         };
 
-        newPlanDays.push(...getRandomMeals(meatMeals, config.meat, 'Fleisch'));
-        newPlanDays.push(...getRandomMeals(fishMeals, config.fish, 'Fisch'));
-        newPlanDays.push(...getRandomMeals(vegMeals, config.veg, 'Veggie'));
+        const chosenDinners: PlanMeal[] = [];
+        chosenDinners.push(...getRandomMeals(meatMeals, config.meat, 'Fleisch'));
+        chosenDinners.push(...getRandomMeals(fishMeals, config.fish, 'Fisch'));
+        chosenDinners.push(...getRandomMeals(vegMeals, config.veg, 'Veggie'));
 
-        // Add Brotzeit placeholders
         for (let i = 0; i < config.brotzeit; i++) {
-            newPlanDays.push({
+            chosenDinners.push({
                 id: `brotzeit-${Date.now()}-${i}`,
                 name: 'Brotzeit',
                 categories: ['brotzeit'],
+                mealTypes: ['main'],
                 isFavorite: false,
                 userId: user?.uid || '',
                 ownerEmail: user?.email || '',
                 isShared: false,
-                description: ''
-            } as Meal);
+                description: '',
+                isEaten: false
+            } as PlanMeal);
         }
 
-        // Sort meals by "effort" to put quick ones on weekdays and elaborate ones on weekends
-        newPlanDays.sort((a, b) => {
+        // Sort dinners by effort
+        chosenDinners.sort((a, b) => {
             const getEffort = (m: Meal) => {
-                let effort = m.duration || 30; // default 30 mins
+                let effort = m.duration || 30;
                 if (m.difficulty === 'easy') effort -= 10;
                 if (m.difficulty === 'hard') effort += 20;
                 return effort;
@@ -201,93 +247,227 @@ export const useMealPlan = () => {
             return getEffort(a) - getEffort(b);
         });
 
-        // The first 5 are weekdays (fastest), the last 2 are weekends (slowest)
-        const weekdays = newPlanDays.slice(0, 5);
-        const weekends = newPlanDays.slice(5, 7);
+        const weekdays = chosenDinners.slice(0, 5);
+        const weekends = chosenDinners.slice(5, 7);
 
-        // Shuffle weekdays among themselves
         for (let i = weekdays.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [weekdays[i], weekdays[j]] = [weekdays[j], weekdays[i]];
         }
-
-        // Shuffle weekends among themselves
         for (let i = weekends.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [weekends[i], weekends[j]] = [weekends[j], weekends[i]];
         }
 
-        // Combine them back
-        newPlanDays.length = 0;
-        newPlanDays.push(...weekdays, ...weekends);
+        chosenDinners.length = 0;
+        chosenDinners.push(...weekdays, ...weekends);
+        const finalDinners = chosenDinners.slice(0, 7);
 
-        // Ensure 7 days and Save
-        const finalPlan = newPlanDays.slice(0, 7);
-        const newStartDate = new Date().toISOString(); // Plan starts "Today"
-        await saveCurrentPlan(finalPlan, newStartDate);
+        // --- BREAKFAST GENERATION ---
+        const breakfastCandidates = meals.filter(m => m.mealTypes && m.mealTypes.includes('breakfast'));
+        const chosenBreakfasts: PlanMeal[] = [];
 
-        // Check for duplicates in the generated plan
-        // We count how many times each meal ID appears
+        if (breakfastCandidates.length === 0) {
+            generatedWarnings.push("Noch keine Frühstücks-Gerichte gespeichert. Füge Gerichte als 'Frühstück' hinzu, um sie automatisch zu planen.");
+            for (let i = 0; i < 7; i++) {
+                chosenBreakfasts.push({
+                    id: `placeholder-breakfast-${Date.now()}-${i}`,
+                    name: 'Frühstück auswählen',
+                    categories: ['veg'],
+                    mealTypes: ['breakfast'],
+                    isFavorite: false,
+                    userId: user?.uid || '',
+                    ownerEmail: user?.email || '',
+                    isShared: false,
+                    description: '',
+                    isEaten: false
+                } as PlanMeal);
+            }
+        } else {
+            let bfPool = [...breakfastCandidates];
+            for (let i = 0; i < 7; i++) {
+                if (bfPool.length === 0) bfPool = [...breakfastCandidates];
+
+                const scoredBfPool = bfPool.map(m => {
+                    let score = 10;
+                    if (m.isFavorite) score += 100;
+                    if (m.lastEaten) {
+                        const daysAgo = (new Date().getTime() - new Date(m.lastEaten as string).getTime()) / (1000 * 60 * 60 * 24);
+                        if (daysAgo < 2) score *= 0.2;
+                        else if (daysAgo > 7) score += 20;
+                    }
+                    return { meal: m, score: Math.max(1, score) };
+                });
+
+                const totalScore = scoredBfPool.reduce((acc, item) => acc + item.score, 0);
+                let randomValue = Math.random() * totalScore;
+                let chosen = scoredBfPool[0].meal;
+                for (const item of scoredBfPool) {
+                    randomValue -= item.score;
+                    if (randomValue <= 0) {
+                        chosen = item.meal;
+                        break;
+                    }
+                }
+                chosenBreakfasts.push({ ...chosen, isEaten: false });
+                bfPool = bfPool.filter(m => m.id !== chosen.id);
+            }
+        }
+
+        // --- ASSEMBLE 7 DAYS ---
+        // "Mittagessen ist immer das essen vom Vortag"
+        const previousSundayDinner = (plan.length >= 7 && plan[6]?.dinner && !plan[6].dinner.id.startsWith('placeholder-'))
+            ? plan[6].dinner
+            : null;
+
+        const finalPlanDays: DayPlan[] = [];
+        for (let i = 0; i < 7; i++) {
+            const bf = chosenBreakfasts[i];
+            const dn = finalDinners[i];
+            let ln: PlanMeal;
+
+            if (i === 0) {
+                // Montag: Mittagessen ist das Essen vom Vortag (Sonntag)
+                ln = previousSundayDinner
+                    ? { ...previousSundayDinner, isEaten: false }
+                    : {
+                        id: `leftover-prev-${Date.now()}`,
+                        name: 'Reste vom Vortag',
+                        categories: ['brotzeit'],
+                        mealTypes: ['main'],
+                        isFavorite: false,
+                        userId: user?.uid || '',
+                        ownerEmail: '',
+                        isShared: false,
+                        description: 'Essen vom Vortag (Sonntag)',
+                        isEaten: false
+                    };
+            } else {
+                // Dienstag bis Sonntag: Mittagessen ist das Abendessen von Tag i - 1!
+                ln = { ...finalDinners[i - 1], isEaten: false };
+            }
+
+            finalPlanDays.push({
+                dayName: DAYS[i],
+                breakfast: bf,
+                lunch: ln,
+                dinner: dn
+            });
+        }
+
+        const newStartDate = new Date().toISOString();
+        await saveCurrentPlan(finalPlanDays, newStartDate);
+
+        // Check for duplicates in dinners
         const idCounts: Record<string, number> = {};
         let hasDuplicates = false;
-        finalPlan.forEach(m => {
+        finalDinners.forEach(m => {
             idCounts[m.id] = (idCounts[m.id] || 0) + 1;
             if (idCounts[m.id] > 1) hasDuplicates = true;
         });
 
         return { hasDuplicates, warnings: generatedWarnings };
+    }, [meals, config, plan, user, refreshMeals]);
 
-    }, [meals, config, plan, startDate, user, refreshMeals]);
+    const swapMeal = async (index: number, slot: DaySlot = 'dinner', desiredCategory?: string) => {
+        if (!plan[index]) return;
+        const currentMeal = plan[index][slot];
 
-    const swapMeal = async (index: number, desiredCategory?: string) => {
-        const currentMeal = plan[index];
-        // For swapping, we need to know which category slot this day is intended for.
-        // Heuristic: currentMeal might have multiple categories.
-        // But the PLAN slot was generated for a specific category type (meat/fish/veg).
-        // If we want to replace a "Meat Day" meal, we should look for other 'meat' meals.
-        // If 'desiredCategory' is passed (not implemented in UI explicitly yet usually), we use that.
-        // Otherwise, if current meal has multiple, this is ambiguous.
-        // Let's assume we want to swap for a meal that shares AT LEAST ONE category with the current one?
-        // Or simpler: The user probably wants another meal of the same "primary" type.
-        // Since we don't store "SlotType" in the plan, we might just use the desiredCategory passed from UI if available.
-        // If not, we iterate current meal categories and find matches.
-
-        let targetCategory = desiredCategory;
-        if (!targetCategory && currentMeal.categories && currentMeal.categories.length > 0) {
-            targetCategory = currentMeal.categories[0]; // fallback to first
+        if (slot === 'breakfast') {
+            const candidates = meals.filter(m => m.mealTypes?.includes('breakfast') && m.id !== currentMeal?.id);
+            if (candidates.length > 0) {
+                const randomNew = candidates[Math.floor(Math.random() * candidates.length)];
+                const updatedPlan = [...plan];
+                updatedPlan[index] = {
+                    ...updatedPlan[index],
+                    breakfast: { ...randomNew, isEaten: false }
+                };
+                await saveCurrentPlan(updatedPlan, startDate || new Date().toISOString());
+            } else {
+                alert("Keine anderen Frühstücks-Gerichte verfügbar!");
+            }
+            return;
         }
 
-        // If it's a Brotzeit slot (or user wants to swap TO random), force swap to a real meal?
-        // Or if user clicks swap on Brotzeit, maybe they want a real meal instead.
-        // Let's assume if category is 'brotzeit', we swap to ANY random meal from the collection
-        // to give inspiration.
+        if (slot === 'lunch') {
+            const candidates = meals.filter(m => (!m.mealTypes || m.mealTypes.length === 0 || m.mealTypes.includes('main')) && m.id !== currentMeal?.id);
+            if (candidates.length > 0) {
+                const randomNew = candidates[Math.floor(Math.random() * candidates.length)];
+                const updatedPlan = [...plan];
+                updatedPlan[index] = {
+                    ...updatedPlan[index],
+                    lunch: { ...randomNew, isEaten: false }
+                };
+                await saveCurrentPlan(updatedPlan, startDate || new Date().toISOString());
+            } else {
+                alert("Keine anderen Gerichte verfügbar!");
+            }
+            return;
+        }
+
+        // slot === 'dinner'
+        let targetCategory = desiredCategory;
+        if (!targetCategory && currentMeal?.categories && currentMeal.categories.length > 0) {
+            targetCategory = currentMeal.categories[0];
+        }
+
         let candidates: Meal[] = [];
+        const mainMeals = meals.filter(m => !m.mealTypes || m.mealTypes.length === 0 || m.mealTypes.includes('main'));
         if (targetCategory === 'brotzeit') {
-            candidates = meals.filter(m => m.id !== currentMeal.id);
+            candidates = mainMeals.filter(m => m.id !== currentMeal?.id);
         } else {
-            candidates = meals.filter(m => m.categories && m.categories.includes(targetCategory as string) && m.id !== currentMeal.id);
+            candidates = mainMeals.filter(m => m.categories && m.categories.includes(targetCategory as string) && m.id !== currentMeal?.id);
         }
 
         if (candidates.length > 0) {
             const randomNew = candidates[Math.floor(Math.random() * candidates.length)];
             const updatedPlan = [...plan];
-            updatedPlan[index] = randomNew;
-            await saveCurrentPlan(updatedPlan, startDate || new Date().toISOString()); // Persist swap
+            const updatedDinner = { ...randomNew, isEaten: false };
+            updatedPlan[index] = {
+                ...updatedPlan[index],
+                dinner: updatedDinner
+            };
+
+            // "Mittagessen ist immer das essen vom Vortag":
+            // When dinner at index changes, update next day's lunch!
+            if (index < 6 && updatedPlan[index + 1]) {
+                updatedPlan[index + 1] = {
+                    ...updatedPlan[index + 1],
+                    lunch: { ...randomNew, isEaten: false }
+                };
+            }
+
+            await saveCurrentPlan(updatedPlan, startDate || new Date().toISOString());
         } else {
-            alert("No other meals available in this category!");
+            alert("Keine anderen Gerichte in dieser Kategorie verfügbar!");
         }
     };
 
-    const updatePlanMeal = async (index: number, updates: Partial<Meal>) => {
-        if (!plan[index]) return;
+    const updatePlanMeal = async (index: number, slot: DaySlot, updates: Partial<Meal>) => {
+        if (!plan[index] || !plan[index][slot]) return;
         const updatedPlan = [...plan];
-        updatedPlan[index] = { ...updatedPlan[index], ...updates };
+        const updatedMeal = { ...updatedPlan[index][slot], ...updates };
+        updatedPlan[index] = {
+            ...updatedPlan[index],
+            [slot]: updatedMeal
+        };
+
+        // If dinner image/name updated, also update next day's lunch if matching
+        if (slot === 'dinner' && index < 6 && updatedPlan[index + 1]) {
+            if (updatedPlan[index + 1].lunch.id === updatedMeal.id) {
+                updatedPlan[index + 1] = {
+                    ...updatedPlan[index + 1],
+                    lunch: { ...updatedPlan[index + 1].lunch, ...updates }
+                };
+            }
+        }
+
         await saveCurrentPlan(updatedPlan, startDate || new Date().toISOString());
     };
 
     const updateConfig = (key: string, value: number) => {
         setConfig(prev => ({ ...prev, [key]: value }));
-    }
+    };
 
     const clearPlan = async () => {
         setPlan([]);
@@ -295,19 +475,24 @@ export const useMealPlan = () => {
         if (user) await savePlanService(user.uid, { days: [], startDate: null });
     };
 
-    const toggleMealEaten = async (index: number) => {
-        if (!plan[index]) return;
+    const toggleMealEaten = async (index: number, slot: DaySlot = 'dinner') => {
+        if (!plan[index] || !plan[index][slot]) return;
 
         const updatedPlan = [...plan];
-        const isCurrentlyEaten = !!updatedPlan[index].isEaten;
+        const targetMeal = updatedPlan[index][slot];
+        const isCurrentlyEaten = !!targetMeal.isEaten;
+        const newEatenState = !isCurrentlyEaten;
+
         updatedPlan[index] = {
             ...updatedPlan[index],
-            isEaten: !isCurrentlyEaten
+            [slot]: {
+                ...targetMeal,
+                isEaten: newEatenState
+            }
         };
 
         setPlan(updatedPlan);
 
-        // Persist to plan service
         if (user) {
             try {
                 await savePlanService(user.uid, {
@@ -319,13 +504,13 @@ export const useMealPlan = () => {
             }
         }
 
-        // If marking as eaten, update the meal's global lastEaten for weighting
-        if (!isCurrentlyEaten) {
+        // If marking as eaten, update global lastEaten
+        if (newEatenState) {
             try {
-                if (!updatedPlan[index].id.startsWith('brotzeit-') && !updatedPlan[index].id.startsWith('placeholder-')) {
+                if (!targetMeal.id.startsWith('brotzeit-') && !targetMeal.id.startsWith('placeholder-') && !targetMeal.id.startsWith('leftover-')) {
                     const today = new Date().toISOString();
-                    await updateLastEatenDate(updatedPlan[index].id, today);
-                    await refreshMeals(); // Refresh global meal list to update scores
+                    await updateLastEatenDate(targetMeal.id, today);
+                    await refreshMeals();
                 }
             } catch (e) {
                 console.error("Failed to update global lastEaten", e);

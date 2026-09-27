@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { getMeals, addMeal as addMealService, deleteMeal as deleteMealService, toggleMealFavorite, updateLastEatenDate, toggleMealShared, getSharedMealsByEmail, importMeal as importMealService, updateMeal as updateMealService } from '../services/meals';
 import { uploadMealImage } from '../services/storage';
 import { useAuth } from './AuthContext';
-import { MealContextType, Meal } from '../types';
+import { MealContextType, Meal, MealType } from '../types';
 
 const MealContext = createContext<MealContextType>({} as MealContextType);
 
@@ -34,7 +34,7 @@ export const MealProvider = ({ children }: { children: React.ReactNode }) => {
         fetchMeals();
     }, [fetchMeals]);
 
-    const addMeal = async (name: string, categories: string[], description = '', isShared = false, ingredients: string[] = [], duration?: number, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string | null) => {
+    const addMeal = async (name: string, categories: string[], description = '', isShared = false, ingredients: string[] = [], duration?: number, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string | null, mealTypes: MealType[] = ['main']) => {
         if (!user) return;
 
         // Check for duplicates (case-insensitive)
@@ -52,7 +52,7 @@ export const MealProvider = ({ children }: { children: React.ReactNode }) => {
             const isLocalImage = imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://');
             const initialImageUrl = isLocalImage ? null : imageUrl;
 
-            const newMeal = await addMealService(name, categories, user.uid, ownerEmail, isShared, description, ingredients, duration, difficulty, initialImageUrl);
+            const newMeal = await addMealService(name, categories, user.uid, ownerEmail, isShared, description, ingredients, duration, difficulty, initialImageUrl, mealTypes);
 
             if (isLocalImage && imageUrl) {
                 try {

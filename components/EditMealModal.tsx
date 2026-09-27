@@ -3,10 +3,12 @@ import { View, Text, TextInput, Modal, StyleSheet, TouchableOpacity, KeyboardAvo
 import { useTheme } from '../context/ThemeContext';
 import { scrapeRecipe } from '../utils/scraper';
 import { Ionicons } from '@expo/vector-icons';
+import { MealType } from '../types';
 
 export default function EditMealModal({ visible, onClose, onSave, meal }: any) {
     const { colors, theme } = useTheme();
     const [name, setName] = useState('');
+    const [mealTypes, setMealTypes] = useState<MealType[]>(['main']);
     const [categories, setCategories] = useState<string[]>([]);
     const [isShared, setIsShared] = useState(false);
     const [description, setDescription] = useState('');
@@ -24,6 +26,7 @@ export default function EditMealModal({ visible, onClose, onSave, meal }: any) {
     useEffect(() => {
         if (meal) {
             setName(meal.name || '');
+            setMealTypes(meal.mealTypes && meal.mealTypes.length > 0 ? meal.mealTypes : ['main']);
             setCategories(meal.categories || []);
             setIsShared(meal.isShared || false);
             setDescription(meal.description || '');
@@ -35,13 +38,27 @@ export default function EditMealModal({ visible, onClose, onSave, meal }: any) {
         }
     }, [meal]);
 
+    const toggleMealType = (type: MealType) => {
+        setMealTypes(prev => {
+            if (prev.includes(type)) {
+                if (prev.length === 1) return prev; // Keep at least one selected
+                return prev.filter(t => t !== type);
+            } else {
+                return [...prev, type];
+            }
+        });
+    };
+
+    const effectiveCategories = categories.length > 0 ? categories : (mealTypes.includes('breakfast') && !mealTypes.includes('main') ? ['veg'] : categories);
+
     const handleSave = async () => {
-        if (name && categories.length > 0) {
+        if (name && effectiveCategories.length > 0 && mealTypes.length > 0) {
             try {
                 const ingredients = ingredientsText.split('\n').map(i => i.trim()).filter(i => i.length > 0);
                 await onSave(meal.id, {
                     name: name.trim(),
-                    categories,
+                    categories: effectiveCategories,
+                    mealTypes,
                     isShared,
                     description: description.trim(),
                     ingredients,
@@ -167,6 +184,62 @@ export default function EditMealModal({ visible, onClose, onSave, meal }: any) {
                         numberOfLines={3}
                     />
 
+                    <Text style={styles.sectionLabel}>Mahlzeit *</Text>
+                    <View style={styles.mealTypeRow}>
+                        <TouchableOpacity
+                            style={[
+                                styles.mealTypeChip,
+                                mealTypes.includes('breakfast') && {
+                                    backgroundColor: theme === 'dark' ? '#E9C46A' : '#E9C46A',
+                                    borderColor: '#E9C46A'
+                                }
+                            ]}
+                            onPress={() => toggleMealType('breakfast')}
+                        >
+                            <Ionicons
+                                name="cafe-outline"
+                                size={18}
+                                color={mealTypes.includes('breakfast') ? '#1D3557' : colors.text}
+                                style={{ marginRight: 6 }}
+                            />
+                            <Text
+                                style={[
+                                    styles.mealTypeText,
+                                    mealTypes.includes('breakfast') && { color: '#1D3557', fontWeight: 'bold' }
+                                ]}
+                            >
+                                Frühstück
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[
+                                styles.mealTypeChip,
+                                mealTypes.includes('main') && {
+                                    backgroundColor: colors.primary,
+                                    borderColor: colors.primary
+                                }
+                            ]}
+                            onPress={() => toggleMealType('main')}
+                        >
+                            <Ionicons
+                                name="restaurant-outline"
+                                size={18}
+                                color={mealTypes.includes('main') ? '#fff' : colors.text}
+                                style={{ marginRight: 6 }}
+                            />
+                            <Text
+                                style={[
+                                    styles.mealTypeText,
+                                    mealTypes.includes('main') && { color: '#fff', fontWeight: 'bold' }
+                                ]}
+                            >
+                                Mittag- / Abendessen
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <Text style={styles.sectionLabel}>Kategorie {mealTypes.includes('main') ? '*' : '(optional)'}</Text>
                     <View style={styles.categoryContainer}>
                         {['meat', 'fish', 'veg'].map((cat) => {
                             const isSelected = categories.includes(cat);
@@ -254,9 +327,9 @@ export default function EditMealModal({ visible, onClose, onSave, meal }: any) {
                             <Text style={styles.cancelButtonText}>Abbrechen</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.button, styles.saveButton, (!name || categories.length === 0) && styles.disabledButton]}
+                            style={[styles.button, styles.saveButton, (!name || effectiveCategories.length === 0 || mealTypes.length === 0) && styles.disabledButton]}
                             onPress={handleSave}
-                            disabled={!name || categories.length === 0}
+                            disabled={!name || effectiveCategories.length === 0 || mealTypes.length === 0}
                         >
                             <Text style={styles.buttonText}>Speichern</Text>
                         </TouchableOpacity>
@@ -334,6 +407,29 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         color: colors.text,
         marginBottom: 10,
         marginLeft: 10,
+    },
+    mealTypeRow: {
+        flexDirection: 'row',
+        gap: 10,
+        width: '100%',
+        marginBottom: 16,
+    },
+    mealTypeChip: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: theme === 'dark' ? '#444' : '#ddd',
+        backgroundColor: theme === 'dark' ? '#1a1a1a' : '#fff',
+    },
+    mealTypeText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.text,
     },
     categoryContainer: {
         flexDirection: 'row',

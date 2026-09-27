@@ -24,25 +24,38 @@ export default function ShoppingScreen() {
         
         const ingredientsMap = new Map<string, { name: string, count: number, mealNames: Set<string> }>();
 
-        plan.forEach(planMeal => {
-            if (!planMeal) return;
-            // Always fetch the live meal from Context so edits (like adding ingredients) are immediately reflected in the plan
-            const liveMeal = meals.find(m => m.id === planMeal.id) || planMeal;
-            
-            if (liveMeal.ingredients && liveMeal.ingredients.length > 0) {
-                liveMeal.ingredients.forEach(ing => {
-                    const normalized = ing.trim().toLowerCase();
-                    if (ingredientsMap.has(normalized)) {
-                        const existing = ingredientsMap.get(normalized)!;
-                        existing.count += 1;
-                        existing.mealNames.add(liveMeal.name);
-                    } else {
-                        const mealSet = new Set<string>();
-                        mealSet.add(liveMeal.name);
-                        ingredientsMap.set(normalized, { name: ing.trim(), count: 1, mealNames: mealSet });
-                    }
-                });
+        plan.forEach((item: any) => {
+            if (!item) return;
+            const mealsToProcess: any[] = [];
+
+            if ('breakfast' in item || 'dinner' in item) {
+                if (item.breakfast && !item.breakfast.id?.startsWith('placeholder-')) {
+                    mealsToProcess.push(item.breakfast);
+                }
+                if (item.dinner && !item.dinner.id?.startsWith('brotzeit-') && !item.dinner.id?.startsWith('placeholder-')) {
+                    mealsToProcess.push(item.dinner);
+                }
+            } else {
+                mealsToProcess.push(item);
             }
+
+            mealsToProcess.forEach(planMeal => {
+                const liveMeal = meals.find(m => m.id === planMeal.id) || planMeal;
+                if (liveMeal.ingredients && liveMeal.ingredients.length > 0) {
+                    liveMeal.ingredients.forEach((ing: string) => {
+                        const normalized = ing.trim().toLowerCase();
+                        if (ingredientsMap.has(normalized)) {
+                            const existing = ingredientsMap.get(normalized)!;
+                            existing.count += 1;
+                            existing.mealNames.add(liveMeal.name);
+                        } else {
+                            const mealSet = new Set<string>();
+                            mealSet.add(liveMeal.name);
+                            ingredientsMap.set(normalized, { name: ing.trim(), count: 1, mealNames: mealSet });
+                        }
+                    });
+                }
+            });
         });
 
         // Convert map to sorted array
@@ -50,7 +63,7 @@ export default function ShoppingScreen() {
             ...item,
             mealNames: Array.from(item.mealNames)
         })).sort((a, b) => a.name.localeCompare(b.name));
-    }, [plan]);
+    }, [plan, meals]);
 
     // Load checked items for the current plan week
     useEffect(() => {

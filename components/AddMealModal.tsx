@@ -1,20 +1,23 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TextInput, Modal, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, Switch, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
 import { scrapeRecipe } from '../utils/scraper';
 import { Ionicons } from '@expo/vector-icons';
+import { MealType } from '../types';
 
 interface AddMealModalProps {
     visible: boolean;
     onClose: (addedMealName?: string) => void;
-    onAdd: (name: string, categories: string[], description?: string, isShared?: boolean, ingredients?: string[], duration?: number, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string | null) => Promise<void>;
+    onAdd: (name: string, categories: string[], description?: string, isShared?: boolean, ingredients?: string[], duration?: number, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string | null, mealTypes?: MealType[]) => Promise<void>;
+    initialMealType?: MealType;
 }
 
-export default function AddMealModal({ visible, onClose, onAdd }: AddMealModalProps) {
+export default function AddMealModal({ visible, onClose, onAdd, initialMealType }: AddMealModalProps) {
     const { colors, theme } = useTheme();
     const [name, setName] = useState('');
+    const [mealTypes, setMealTypes] = useState<MealType[]>(initialMealType ? [initialMealType] : ['main']);
     const [categories, setCategories] = useState<string[]>([]);
     const [isShared, setIsShared] = useState(false);
     const [description, setDescription] = useState('');
@@ -28,11 +31,18 @@ export default function AddMealModal({ visible, onClose, onAdd }: AddMealModalPr
     const [isSaving, setIsSaving] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
+    useEffect(() => {
+        if (visible && initialMealType) {
+            setMealTypes([initialMealType]);
+        }
+    }, [visible, initialMealType]);
+
     // Dynamic styles
     const styles = getStyles(colors, theme);
 
     const resetForm = () => {
         setName('');
+        setMealTypes(initialMealType ? [initialMealType] : ['main']);
         setCategories([]);
         setIsShared(false);
         setDescription('');
@@ -51,13 +61,26 @@ export default function AddMealModal({ visible, onClose, onAdd }: AddMealModalPr
         onClose();
     };
 
+    const toggleMealType = (type: MealType) => {
+        setMealTypes(prev => {
+            if (prev.includes(type)) {
+                if (prev.length === 1) return prev; // Keep at least one selected
+                return prev.filter(t => t !== type);
+            } else {
+                return [...prev, type];
+            }
+        });
+    };
+
+    const effectiveCategories = categories.length > 0 ? categories : (mealTypes.includes('breakfast') && !mealTypes.includes('main') ? ['veg'] : categories);
+
     const handleAdd = async () => {
-        if (name.trim() && categories.length > 0 && !isSaving) {
+        if (name.trim() && effectiveCategories.length > 0 && mealTypes.length > 0 && !isSaving) {
             setIsSaving(true);
             try {
                 const ingredients = ingredientsText.split('\n').map(i => i.trim()).filter(i => i.length > 0);
                 const mealName = name.trim();
-                await onAdd(mealName, categories, description.trim(), isShared, ingredients, duration, difficulty, imageUri);
+                await onAdd(mealName, effectiveCategories, description.trim(), isShared, ingredients, duration, difficulty, imageUri, mealTypes);
                 
                 setIsSuccess(true);
                 setTimeout(() => {
@@ -285,7 +308,62 @@ export default function AddMealModal({ visible, onClose, onAdd }: AddMealModalPr
                             numberOfLines={3}
                         />
 
-                        <Text style={styles.sectionLabel}>Kategorie *</Text>
+                        <Text style={styles.sectionLabel}>Mahlzeit *</Text>
+                        <View style={styles.mealTypeRow}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.mealTypeChip,
+                                    mealTypes.includes('breakfast') && {
+                                        backgroundColor: theme === 'dark' ? '#E9C46A' : '#E9C46A',
+                                        borderColor: '#E9C46A'
+                                    }
+                                ]}
+                                onPress={() => toggleMealType('breakfast')}
+                            >
+                                <Ionicons
+                                    name="cafe-outline"
+                                    size={18}
+                                    color={mealTypes.includes('breakfast') ? '#1D3557' : colors.text}
+                                    style={{ marginRight: 6 }}
+                                />
+                                <Text
+                                    style={[
+                                        styles.mealTypeText,
+                                        mealTypes.includes('breakfast') && { color: '#1D3557', fontWeight: 'bold' }
+                                    ]}
+                                >
+                                    Frühstück
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[
+                                    styles.mealTypeChip,
+                                    mealTypes.includes('main') && {
+                                        backgroundColor: colors.primary,
+                                        borderColor: colors.primary
+                                    }
+                                ]}
+                                onPress={() => toggleMealType('main')}
+                            >
+                                <Ionicons
+                                    name="restaurant-outline"
+                                    size={18}
+                                    color={mealTypes.includes('main') ? '#fff' : colors.text}
+                                    style={{ marginRight: 6 }}
+                                />
+                                <Text
+                                    style={[
+                                        styles.mealTypeText,
+                                        mealTypes.includes('main') && { color: '#fff', fontWeight: 'bold' }
+                                    ]}
+                                >
+                                    Mittag- / Abendessen
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={styles.sectionLabel}>Kategorie {mealTypes.includes('main') ? '*' : '(optional)'}</Text>
                         <View style={styles.categoryContainer}>
                             {['meat', 'fish', 'veg'].map((cat) => {
                                 const isSelected = categories.includes(cat);
@@ -381,11 +459,11 @@ export default function AddMealModal({ visible, onClose, onAdd }: AddMealModalPr
                             style={[
                                 styles.button,
                                 styles.addButton,
-                                (!name.trim() || categories.length === 0 || isSaving) && styles.disabledButton,
+                                (!name.trim() || effectiveCategories.length === 0 || mealTypes.length === 0 || isSaving) && styles.disabledButton,
                                 isSuccess && styles.successButton
                             ]}
                             onPress={handleAdd}
-                            disabled={!name.trim() || categories.length === 0 || isSaving}
+                            disabled={!name.trim() || effectiveCategories.length === 0 || mealTypes.length === 0 || isSaving}
                         >
                             {isSaving ? (
                                 <View style={styles.buttonInnerLoading}>
@@ -556,6 +634,29 @@ const getStyles = (colors: any, theme: string) => StyleSheet.create({
         color: colors.text,
         marginBottom: 8,
         marginLeft: 4,
+    },
+    mealTypeRow: {
+        flexDirection: 'row',
+        gap: 10,
+        width: '100%',
+        marginBottom: 16,
+    },
+    mealTypeChip: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        paddingHorizontal: 12,
+        borderRadius: 14,
+        borderWidth: 1.5,
+        borderColor: theme === 'dark' ? '#444' : '#ddd',
+        backgroundColor: theme === 'dark' ? '#1a1a1a' : '#fff',
+    },
+    mealTypeText: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: colors.text,
     },
     categoryContainer: {
         flexDirection: 'row',

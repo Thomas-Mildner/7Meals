@@ -1,6 +1,6 @@
 import { collection, addDoc, getDocs, deleteDoc, updateDoc, doc, query, where, deleteField } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
-import { Meal } from '../types';
+import { Meal, MealType } from '../types';
 
 const MEALS_COLLECTION = 'meals';
 
@@ -8,11 +8,12 @@ const MEALS_COLLECTION = 'meals';
 // Old: { name: '...', category: 'meat' }
 // New: { name: '...', categories: ['meat', 'veg'] }
 
-export const addMeal = async (name: string, categories: string[], userId: string, ownerEmail = '', isShared = false, description = '', ingredients: string[] = [], duration?: number, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string | null): Promise<Meal> => {
+export const addMeal = async (name: string, categories: string[], userId: string, ownerEmail = '', isShared = false, description = '', ingredients: string[] = [], duration?: number, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string | null, mealTypes: MealType[] = ['main']): Promise<Meal> => {
     try {
         const docRef = await addDoc(collection(db, MEALS_COLLECTION), {
             name,
             categories, // expects array
+            mealTypes: (mealTypes && mealTypes.length > 0) ? mealTypes : ['main'],
             userId,
             ownerEmail: ownerEmail.toLowerCase(),
             isShared,
@@ -24,7 +25,7 @@ export const addMeal = async (name: string, categories: string[], userId: string
             difficulty: difficulty || null,
             imageUrl: imageUrl || null,
         });
-        return { id: docRef.id, name, categories, userId, ownerEmail: ownerEmail.toLowerCase(), isShared, description, isFavorite: false, ingredients, duration, difficulty, imageUrl };
+        return { id: docRef.id, name, categories, mealTypes: (mealTypes && mealTypes.length > 0) ? mealTypes : ['main'], userId, ownerEmail: ownerEmail.toLowerCase(), isShared, description, isFavorite: false, ingredients, duration, difficulty, imageUrl };
     } catch (error) {
         console.error("Error adding meal: ", error);
         throw error;
@@ -43,7 +44,8 @@ export const getMeals = async (userId: string): Promise<Meal[]> => {
             if (categories.length === 0 && data.category) {
                 categories = [data.category];
             }
-            meals.push({ id: doc.id, ...data, categories } as Meal);
+            const mealTypes = (data.mealTypes && data.mealTypes.length > 0) ? data.mealTypes : ['main'];
+            meals.push({ id: doc.id, ...data, categories, mealTypes } as Meal);
         });
         return meals;
     } catch (error) {
@@ -85,12 +87,13 @@ export const updateLastEatenDate = async (id: string, date: string): Promise<voi
     }
 };
 
-export const updateMeal = async (id: string, { name, categories, description, isShared, imageUrl, ingredients, duration, difficulty }: Partial<Meal>): Promise<void> => {
+export const updateMeal = async (id: string, { name, categories, description, isShared, imageUrl, ingredients, duration, difficulty, mealTypes }: Partial<Meal>): Promise<void> => {
     try {
         const mealRef = doc(db, MEALS_COLLECTION, id);
         const updates: any = {};
         if (name !== undefined) updates.name = name;
         if (categories !== undefined) updates.categories = categories;
+        if (mealTypes !== undefined) updates.mealTypes = mealTypes;
         if (description !== undefined) updates.description = description;
         if (isShared !== undefined) updates.isShared = isShared;
         if (imageUrl !== undefined) {
@@ -139,7 +142,8 @@ export const getSharedMealsByEmail = async (email: string): Promise<Meal[]> => {
             if (categories.length === 0 && data.category) {
                 categories = [data.category];
             }
-            meals.push({ id: docSnap.id, ...data, categories } as Meal);
+            const mealTypes = (data.mealTypes && data.mealTypes.length > 0) ? data.mealTypes : ['main'];
+            meals.push({ id: docSnap.id, ...data, categories, mealTypes } as Meal);
         });
         return meals;
     } catch (error) {
@@ -150,9 +154,11 @@ export const getSharedMealsByEmail = async (email: string): Promise<Meal[]> => {
 
 export const importMeal = async (meal: Partial<Meal>, userId: string, ownerEmail: string): Promise<Meal> => {
     try {
+        const mealTypes: MealType[] = (meal.mealTypes && meal.mealTypes.length > 0) ? (meal.mealTypes as MealType[]) : ['main'];
         const docRef = await addDoc(collection(db, MEALS_COLLECTION), {
             name: meal.name,
             categories: meal.categories || [],
+            mealTypes,
             description: meal.description || '',
             userId,
             ownerEmail: ownerEmail.toLowerCase(),
@@ -163,7 +169,7 @@ export const importMeal = async (meal: Partial<Meal>, userId: string, ownerEmail
             duration: meal.duration || null,
             difficulty: meal.difficulty || null,
         });
-        return { id: docRef.id, name: meal.name || '', categories: meal.categories || [], description: meal.description || '', userId, ownerEmail: ownerEmail.toLowerCase(), isShared: false, isFavorite: false, ingredients: meal.ingredients || [], duration: meal.duration, difficulty: meal.difficulty };
+        return { id: docRef.id, name: meal.name || '', categories: meal.categories || [], mealTypes, description: meal.description || '', userId, ownerEmail: ownerEmail.toLowerCase(), isShared: false, isFavorite: false, ingredients: meal.ingredients || [], duration: meal.duration, difficulty: meal.difficulty };
     } catch (error) {
         console.error("Error importing meal: ", error);
         throw error;

@@ -1,10 +1,14 @@
 import { User as FirebaseUser } from 'firebase/auth';
 
+export type MealType = 'breakfast' | 'main';
+export type DaySlot = 'breakfast' | 'lunch' | 'dinner';
+
 export interface Meal {
   id: string;
   name: string;
   categories: string[];
   category?: string; // For backwards compatibility
+  mealTypes?: MealType[]; // 'breakfast', 'main', or both
   userId: string;
   ownerEmail: string;
   isShared: boolean;
@@ -17,6 +21,16 @@ export interface Meal {
   ingredients?: string[];
   duration?: number;
   difficulty?: 'easy' | 'medium' | 'hard';
+}
+
+export type PlanMeal = Meal & { isEaten?: boolean };
+
+export interface DayPlan {
+  date?: string;
+  dayName?: string;
+  breakfast: PlanMeal;
+  lunch: PlanMeal;
+  dinner: PlanMeal;
 }
 
 export interface MealPlanDay {
@@ -47,7 +61,7 @@ export interface MealContextType {
   loading: boolean;
   error: any;
   refreshMeals: () => Promise<void>;
-  addMeal: (name: string, categories: string[], description?: string, isShared?: boolean, ingredients?: string[], duration?: number, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string | null) => Promise<void>;
+  addMeal: (name: string, categories: string[], description?: string, isShared?: boolean, ingredients?: string[], duration?: number, difficulty?: 'easy' | 'medium' | 'hard', imageUrl?: string | null, mealTypes?: MealType[]) => Promise<void>;
   removeMeal: (id: string) => Promise<void>;
   markAsEaten: (id: string) => Promise<void>;
   toggleFavorite: (id: string, isFavorite: boolean) => Promise<void>;
