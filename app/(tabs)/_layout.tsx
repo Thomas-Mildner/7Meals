@@ -30,21 +30,21 @@ export default function TabLayout() {
                 name="meals"
                 options={{
                     title: 'Gerichte',
-                    tabBarIcon: ({ color, size }) => <Ionicons name="restaurant" size={size} color={color} />,
+                    tabBarIcon: ({ color, size }) => <Ionicons name="restaurant" size={size} color={typeof color === 'string' ? color : undefined} />,
                 }}
             />
             <Tabs.Screen
                 name="plan"
                 options={{
                     title: 'Wochenplan',
-                    tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={size} color={color} />,
+                    tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={size} color={typeof color === 'string' ? color : undefined} />,
                 }}
             />
             <Tabs.Screen
                 name="shopping"
                 options={{
                     title: 'Einkauf',
-                    tabBarIcon: ({ color, size }) => <Ionicons name="cart" size={size} color={color} />,
+                    tabBarIcon: ({ color, size }) => <Ionicons name="cart" size={size} color={typeof color === 'string' ? color : undefined} />,
                 }}
             />
         </Tabs>
